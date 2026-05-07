@@ -1,0 +1,10 @@
+.DS_Store
+.cursor/
+Code/old/
+Data/
+Data/Output/
+tex/*.pdf
+*.Rhistory
+*.RData
+__pycache__/
+*.pyc
