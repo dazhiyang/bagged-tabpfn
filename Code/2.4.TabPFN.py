@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import sklearn as sk
 import tabpfn_client
+from tabpfn_client.constants import ModelVersion
 
 tabpfn_client.set_access_token(tabpfn_client.get_access_token())
 
@@ -56,7 +57,7 @@ out_dir = os.path.join(project_path, "Data", "Output")
 os.makedirs(out_dir, exist_ok=True)
 out_file = os.path.join(out_dir, "TabPFN.txt")
 
-model = tabpfn_client.TabPFNRegressor()
+model = tabpfn_client.TabPFNRegressor.create_default_for_version(ModelVersion.V2_5)
 blocks: list[pd.DataFrame] = []
 
 
