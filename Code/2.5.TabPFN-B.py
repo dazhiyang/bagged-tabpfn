@@ -5,7 +5,7 @@
 # Each member m = 1…ENS_K shares the same TabPFN random_state (ENS_SEED + m − 1).
 # Bootstrap indices are redrawn independently for every (target × retrieval) combo fit.
 # Each file stacks all combos like TabPFN.txt / MLR.txt (Time, combo, y, x).
-# Files: Data/Output/TabPFN-C{m}.txt
+# Files: Data/Output/TabPFN-B{m}.txt
 
 import os
 
@@ -128,7 +128,7 @@ for k in tqdm(range(ENS_K), desc="TabPFN-B client members", unit="member"):
         )
 
     out = pd.concat(blocks, ignore_index=True)
-    out_file = os.path.join(out_dir, f"TabPFN-C{k + 1}.txt")
+    out_file = os.path.join(out_dir, f"TabPFN-B{k + 1}.txt")
     out.to_csv(out_file, sep="\t", index=False)
     written.append(out_file)
     tqdm.write(f"member {k + 1}/{ENS_K}: wrote {out_file} ({len(out)} rows).")
