@@ -65,6 +65,26 @@ wong <- c(
 # Continuous colour: viridis family only (skill default).
 viridis_continuous_option <- "viridis"
 
+# Panel (b): SHAP feature column names → plotmath strings for parse(text=…) on y-axis.
+feature_label_expr <- c(
+  xP = "italic(x)[P]",
+  SZA = "italic(Z)",
+  t2m = "italic(T)",
+  sp = "italic(P)[s]",
+  hcc = "italic(f)[H]",
+  lcc = "italic(f)[L]",
+  mcc = "italic(f)[M]",
+  asn = "italic(alpha)[sn]",
+  rsn = "italic(rho)[sn]",
+  sd = "italic(h)[sn]",
+  tcsw = "italic(w)[sn]",
+  fal = "italic(alpha)",
+  tco3 = "italic(o)[3]",
+  tcwv = "italic(w)",
+  W = "italic(W)",
+  rh = "italic(R)[h]"
+)
+
 # Journal geometry — PDF page size (mm); custom one-row composite.
 width_mm <- 160
 height_mm <- 70
@@ -187,20 +207,19 @@ rank.tbl <- shap.df %>%
 
 shap.df$feature <- factor(shap.df$feature, levels = rev(rank.tbl$feature))
 
-# Panel (b): tick label for covariate xP → plotmath italic(x)[P] (pass parse(text=…) via scale, not a labels fn).
+# Panel (b): y-axis labels via feature_label_expr (parameter block); unknown codes → `` `name` ``.
 feat_ord <- levels(shap.df$feature)
-feat_label_txt <- dplyr::case_when(
-  feat_ord == "xP" ~ "italic(x)[P]",
-  feat_ord == "SZA" ~ "'sza'",
-  feat_ord == "W" ~ "'ws'",
-  TRUE ~ paste0("`", feat_ord, "`")
+feat_label_txt <- ifelse(
+  feat_ord %in% names(feature_label_expr),
+  unname(feature_label_expr[feat_ord]),
+  paste0("`", feat_ord, "`")
 )
+feat_chr <- as.character(shap.df$feature)
 shap.df$feature_disp <- factor(
-  dplyr::case_when(
-    as.character(shap.df$feature) == "xP" ~ "italic(x)[P]",
-    as.character(shap.df$feature) == "SZA" ~ "'sza'",
-    as.character(shap.df$feature) == "W" ~ "'ws'",
-    TRUE ~ paste0("`", as.character(shap.df$feature), "`")
+  ifelse(
+    feat_chr %in% names(feature_label_expr),
+    unname(feature_label_expr[feat_chr]),
+    paste0("`", feat_chr, "`")
   ),
   levels = feat_label_txt
 )
