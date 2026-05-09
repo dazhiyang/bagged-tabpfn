@@ -57,7 +57,22 @@ OUT_FIG = os.path.join(OUT_DIR, "tabpfn_attribute_tokens_evolution.png")
 
 TRAIN_YEAR = 2024
 TARGET = "yH"
-FEATURES = ["xP", "SZA", "lcc", "mcc", "tcsw", "tcwv"]
+# TabPFN uses one token per column; extend this list to explore deeper embeddings (keep names as in INPUT_FILE).
+# xP/xS/y targets are Ghc-normalized in ``main``; SZA is cos(rad).
+FEATURES = [
+    "xP",
+    "xS",
+    "SZA",
+    "lcc",
+    "mcc",
+    "tcsw",
+    "tcwv",
+    "t2m",
+    "sp",
+    "hcc",
+    "W",
+    "rh",
+]
 N_TARGET_BINS = 7
 N_TRAIN = 2000
 RANDOM_STATE = 123
@@ -71,6 +86,15 @@ LAYERS_DEPTH_ROW = [1, 2, 3, 6, 9, 12]
 
 D_ATTR = len(FEATURES)
 ATTRIBUTE_NAMES = FEATURES
+
+
+def _attribute_color_map(n_attr: int) -> np.ndarray:
+    """Distinct colors for arbitrary ``d`` (Set1 only has a few categories)."""
+    if n_attr <= 10:
+        return plt.cm.tab10(np.linspace(0.05, 0.95, n_attr))
+    if n_attr <= 20:
+        return plt.cm.tab20(np.linspace(0.05, 0.95, n_attr))
+    return plt.cm.nipy_spectral(np.linspace(0.1, 0.9, n_attr))
 
 
 def quantile_bin_labels(y: pd.Series, n_bins: int) -> tuple[np.ndarray, np.ndarray]:
@@ -358,7 +382,7 @@ def main() -> None:
     print(f"Input token matrix shape: {layer_tokens['input'].shape}")
 
     attribute_colors = np.tile(np.arange(D_ATTR, dtype=int), n_train_fit)
-    colors_map = plt.cm.Set1(np.linspace(0, 1, D_ATTR))
+    colors_map = _attribute_color_map(D_ATTR)
 
     fig = plt.figure(figsize=(18, 9), layout="constrained")
     gs = GridSpec(2, 4, figure=fig, height_ratios=[1, 1])
@@ -434,7 +458,14 @@ def main() -> None:
                 )
                 for j in range(D_ATTR)
             ]
-            ax.legend(handles=handles, loc="center", frameon=True, title="Attributes")
+            ax.legend(
+                handles=handles,
+                loc="center",
+                frameon=True,
+                title="Attributes",
+                ncol=2 if D_ATTR > 8 else 1,
+                fontsize=max(5, 9 - D_ATTR // 4),
+            )
             ax.axis("off")
         else:
             ax.axis("off")
