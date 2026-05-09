@@ -30,7 +30,7 @@ pca_file <- file.path(diag_dir, "feature_token_pca_layers_long.csv")
 file_attn <- file.path(diag_dir, "attention_feature_layers_long.csv")
 baseline_tex <- file.path(fig_dir, "baseline_tables.tex")
 fig_out <- file.path(fig_dir, "Fig3.pdf")
-n_label_bins <- 7L
+n_label_bins <- 3L
 
 base_font_family <- "Times"
 text_size_pt <- 8

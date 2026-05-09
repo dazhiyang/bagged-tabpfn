@@ -5,7 +5,9 @@
 
 Classifier-checkpoint stage embeddings + PCA rows for Fig. 3 panel (d):
 - Load TabPFN v2 classifier from ``CHECKPOINT_FILE`` (local path; must exist).
-- Quantize regression target for classifier fitting.
+- Bin normalized ``TARGET`` with **fixed intervals** on ``[0, 1.1]`` (see ``target_fixed_bins``);
+  rows outside that union are **dropped** before fitting. Bootstrap indices still follow ``ENS_K``
+  × ``COMBO_ORDER`` (member B10, combo ``COMBO``).
 - **PCA embeddings**: same rows for Full vs B10 (``build_pca_rows``); **per stage**, fit
   **separate** ``StandardScaler`` + ``PCA(2)`` on Full rows and on B10 rows (axes differ by context).
 - Writes ``feature_token_pca_layers_long.csv`` for ``Code/4.3.Fig.3.R``.
@@ -34,7 +36,7 @@ TARGET = "yH"
 FEATURES = ["xP", "SZA", "lcc", "mcc", "tcsw", "tcwv"]
 COMBO = "yHxP"
 
-N_TARGET_BINS = 7
+N_TARGET_CLASSES = 3  # fixed bins on normalized yH; must match ``target_fixed_bins``
 N_ESTIMATORS = 1
 LAYERS = [1, 2, 3, 6, 9, 12]
 
@@ -49,16 +51,18 @@ TABPFN_EMBED_DEVICE = os.environ.get("TABPFN_EMBED_DEVICE", "cpu")
 OUT_FEATURE_TOKEN_PCA_LONG = os.path.join(DIAG_DIR, "feature_token_pca_layers_long.csv")
 
 
-def quantile_bin_labels(y: pd.Series, n_bins: int) -> tuple[np.ndarray, np.ndarray]:
-    q = np.linspace(0.0, 1.0, n_bins + 1)
-    edges = np.quantile(y.to_numpy(dtype=float), q)
-    edges = np.unique(edges)
-    if len(edges) < 2:
-        raise RuntimeError("Failed to build quantile bins: target is nearly constant.")
-    yb = pd.cut(y, bins=edges, include_lowest=True, labels=False)
-    if yb.isna().any():
-        yb = yb.fillna(len(edges) - 2)
-    return yb.to_numpy(dtype=int), edges
+def target_fixed_bins(y: pd.Series) -> tuple[np.ndarray, np.ndarray]:
+    """Classes 0,1,2 for ``[0, 0.3)``, ``[0.3, 0.9)``, ``[0.9, 1.1]`` on normalized ``TARGET``; ``keep`` masks rows to retain."""
+    yv = y.to_numpy(dtype=float)
+    m0 = (yv >= 0.0) & (yv < 0.3)
+    m1 = (yv >= 0.3) & (yv < 0.9)
+    m2 = (yv >= 0.9) & (yv <= 1.1)
+    keep = m0 | m1 | m2
+    lab = np.full(len(yv), -1, dtype=np.int64)
+    lab[m0] = 0
+    lab[m1] = 1
+    lab[m2] = 2
+    return lab, keep
 
 
 def build_b10_indices(n_train: int) -> np.ndarray:
@@ -465,14 +469,18 @@ def main() -> None:
 
     yt = df["Time"].dt.year
     df_train = df.loc[yt == TRAIN_YEAR].copy()
+    y_train_bin, keep = target_fixed_bins(df_train[TARGET])
+    n_before = len(df_train)
+    df_train = df_train.loc[keep].reset_index(drop=True)
+    y_train_bin = y_train_bin[keep]
+    print(
+        f"Fixed target bins [0,0.3), [0.3,0.9), [0.9,1.1] on normalized {TARGET}: "
+        f"kept {len(df_train)} / {n_before} rows ({N_TARGET_CLASSES} classes)."
+    )
 
     X_train = df_train[FEATURES]
-    y_train = df_train[TARGET]
-
     scaler = sk.preprocessing.StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
-
-    y_train_bin, _ = quantile_bin_labels(y_train, N_TARGET_BINS)
 
     idx_b10 = build_b10_indices(n_train=X_train_scaled.shape[0])
     n_b10 = int(idx_b10.shape[0])
