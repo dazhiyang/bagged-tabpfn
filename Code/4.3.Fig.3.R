@@ -1,7 +1,8 @@
 #################################################################################
 # 4.3.Fig.3.R — Fig 3 PDF (tex/Fig3.pdf).
 # (a) ΔRMSE vs TabPFN (baseline_tables.tex). (b) Attention + Δ attention heatmaps (one ggplot,
-# ggnewscale; facets Full / B10 / B10−Full × layers L3–L12). (c) Token PCA (PC1 vs PC2).
+#     ggnewscale; facets Full / B10 / B10−Full × layers L3–L12). (c) Token PCA (PC1 vs PC2) via
+#     ggh4x::facet_grid2(..., independent = "all") for facet_grid-style strips and per-panel free axes.
 # Layout: patchwork — top row (a)|(b) with top_row_widths, bottom row (c) full width.
 #################################################################################
 
@@ -10,6 +11,9 @@ rm(list = ls(all = TRUE))
 if (!requireNamespace("ggnewscale", quietly = TRUE)) {
   stop("Install ggnewscale: install.packages(\"ggnewscale\")")
 }
+if (!requireNamespace("ggh4x", quietly = TRUE)) {
+  stop("Install ggh4x (PCA panel strips + fully free scales): install.packages(\"ggh4x\")")
+}
 
 suppressPackageStartupMessages({
   library(ggplot2)
@@ -17,6 +21,7 @@ suppressPackageStartupMessages({
   library(tidyr)
   library(scales)
   library(ggnewscale)
+  library(ggh4x)
   library(patchwork)
   library(scattermore)
 })
@@ -349,10 +354,12 @@ panel_a <- ggplot(panel_a_long, aes(x = series, y = rmse_wm2_imp, fill = series)
   )
 
 p_pca <- ggplot() +
-  facet_grid(
-    context ~ stage,
-    drop = FALSE,
+  ggh4x::facet_grid2(
+    rows = vars(context),
+    cols = vars(stage),
     scales = "free",
+    independent = "all",
+    drop = FALSE,
     labeller = labeller(context = label_value, stage = label_value)
   )
 
@@ -363,7 +370,7 @@ for (ft in feat_tokens_plot) {
       mapping = aes(x = pc1, y = pc2),
       color = unname(feat_cols[[ft]]),
       pointsize = pca_pointsize,
-      alpha = 0.35,
+      alpha = 0.3,
       pixels = c(700, 700),
       inherit.aes = FALSE
     )
