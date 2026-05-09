@@ -8,8 +8,10 @@ Classifier-checkpoint stage embeddings + PCA rows for Fig. 3 panel (d):
 - Bin normalized ``TARGET`` with **fixed intervals** on ``[0, 1.1]`` (see ``target_fixed_bins``);
   rows outside that union are **dropped** before fitting. Bootstrap indices still follow ``ENS_K``
   × ``COMBO_ORDER`` (member B10, combo ``COMBO``).
-- **PCA embeddings**: same rows for Full vs B10 (``build_pca_rows``); **per stage**, fit
-  **separate** ``StandardScaler`` + ``PCA(2)`` on Full rows and on B10 rows (axes differ by context).
+- **PCA embeddings** (paper-aligned): **Full** — extract embeddings on **all N** rows, fit PCA on
+  **N × d** tokens per stage, then write CSV rows only for the **B10 bootstrap** training indices
+  (same count as B10; ``sample_id`` 0…n_b10−1 matches B10 rows). **B10** — fit PCA on
+  **n_b10 × d** tokens from the bootstrap-fitted model. Axes differ by context.
 - Writes ``feature_token_pca_layers_long.csv`` for ``Code/4.3.Fig.3.R``.
 
 Attention matrices (panels (b)–(c)): run ``Code/3.3.attention.py`` first (chunked
@@ -358,15 +360,14 @@ def extract_stage_embeddings_v34(
     return stage_to_repr
 
 
-def _pca_flat_embeddings(
-    emb: np.ndarray,
-    n_common: int,
-    n_feat: int,
+def _pca_fit_transform_grid(
+    arr: np.ndarray,
 ) -> tuple[np.ndarray | None, sk.decomposition.PCA | None]:
-    """``emb`` shape ``(n_common * n_feat, emb_dim)`` → grid ``(n_common, n_feat, 2)`` or None if <2 finite rows."""
-    n_flat = n_common * n_feat
-    if emb.shape[0] != n_flat:
-        raise RuntimeError(f"Expected emb rows {n_flat}, got {emb.shape[0]}")
+    """``arr`` shape ``(N, n_feat, emb_dim)`` → PCA grid ``(N, n_feat, 2)`` and fitted PCA, or (None, None)."""
+    if arr.ndim != 3:
+        raise RuntimeError(f"Expected (N, n_feat, emb_dim); got {arr.shape}")
+    n0, n_feat, _emb_dim = arr.shape
+    emb = arr.reshape(n0 * n_feat, arr.shape[2])
     valid = np.isfinite(emb).all(axis=1)
     if valid.sum() < 2:
         return None, None
@@ -374,31 +375,44 @@ def _pca_flat_embeddings(
     x = sk.preprocessing.StandardScaler().fit_transform(x)
     pca = sk.decomposition.PCA(n_components=2, random_state=ENS_SEED)
     pcs = pca.fit_transform(x)
-    flat = np.full((n_flat, 2), np.nan, dtype=float)
+    flat = np.full((n0 * n_feat, 2), np.nan, dtype=float)
     flat[valid, :] = pcs
-    return flat.reshape(n_common, n_feat, 2), pca
+    return flat.reshape(n0, n_feat, 2), pca
 
 
 def build_pca_rows(
     repr_full: dict[str, np.ndarray],
     repr_b10: dict[str, np.ndarray],
     y_bin_by_sample: np.ndarray,
+    idx_plot_global: np.ndarray,
 ) -> pd.DataFrame:
     stage_order = ["Input"] + [f"L{x}" for x in LAYERS]
     rows: list[dict] = []
+    idx_plot = np.asarray(idx_plot_global, dtype=np.int64)
+    if idx_plot.ndim != 1:
+        raise RuntimeError(f"idx_plot_global must be 1D; got shape {idx_plot.shape}")
+    n_plot = int(idx_plot.shape[0])
+    if n_plot != len(y_bin_by_sample):
+        raise RuntimeError(
+            f"idx_plot_global length {n_plot} must match y_bin_by_sample {len(y_bin_by_sample)}."
+        )
+
     for stage in stage_order:
         if stage not in repr_full or stage not in repr_b10:
             continue
         arr_full = repr_full[stage]
         arr_b10 = repr_b10[stage]
-        n_full, n_tok, emb_dim = arr_full.shape
+        n_full, n_tok, _emb_dim = arr_full.shape
         n_b10 = arr_b10.shape[0]
-        n_common = min(n_full, n_b10, len(y_bin_by_sample))
-        if n_common < 2:
-            continue
-        arr_full = arr_full[:n_common]
-        arr_b10 = arr_b10[:n_common]
-        y_bin_stage = y_bin_by_sample[:n_common]
+        if n_b10 != n_plot:
+            raise RuntimeError(
+                f"B10 repr rows {n_b10} must match bootstrap length {n_plot} at stage={stage}."
+            )
+        if idx_plot.min() < 0 or idx_plot.max() >= n_full:
+            raise RuntimeError(
+                f"idx_plot_global out of range for Full repr N={n_full}: "
+                f"[{idx_plot.min()}, {idx_plot.max()}]"
+            )
 
         feat_labels = FEATURES
         n_feat = len(feat_labels)
@@ -407,19 +421,16 @@ def build_pca_rows(
                 f"Expected (M,d,E) with d={n_feat} attribute columns (3.4-style); "
                 f"got full tok={n_tok}, b10 tok={arr_b10.shape[1]} at stage={stage}."
             )
-        feat_full = arr_full
-        feat_b10 = arr_b10
 
-        emb_full = feat_full.reshape(n_common * n_feat, emb_dim)
-        emb_b10 = feat_b10.reshape(n_common * n_feat, emb_dim)
-
-        pc_full, pca_full = _pca_flat_embeddings(emb_full, n_common, n_feat)
-        pc_b10, pca_b10 = _pca_flat_embeddings(emb_b10, n_common, n_feat)
-        if pc_full is None or pc_b10 is None:
+        pc_full_all, pca_full = _pca_fit_transform_grid(arr_full)
+        pc_b10, pca_b10 = _pca_fit_transform_grid(arr_b10)
+        if pc_full_all is None or pca_full is None or pc_b10 is None or pca_b10 is None:
             continue
 
-        for i in range(n_common):
-            yb = int(y_bin_stage[i])
+        pc_full_plot = pc_full_all[idx_plot]
+
+        for i in range(n_plot):
+            yb = int(y_bin_by_sample[i])
             for f in range(n_feat):
                 rows.append(
                     {
@@ -428,14 +439,14 @@ def build_pca_rows(
                         "sample_id": int(i),
                         "token": feat_labels[f] if f < len(feat_labels) else f"feature_{f + 1}",
                         "y_bin": f"C{yb + 1}",
-                        "pc1": float(pc_full[i, f, 0]),
-                        "pc2": float(pc_full[i, f, 1]),
+                        "pc1": float(pc_full_plot[i, f, 0]),
+                        "pc2": float(pc_full_plot[i, f, 1]),
                         "explained_var_pc1": float(pca_full.explained_variance_ratio_[0]),
                         "explained_var_pc2": float(pca_full.explained_variance_ratio_[1]),
                     }
                 )
-        for i in range(n_common):
-            yb = int(y_bin_stage[i])
+        for i in range(n_plot):
+            yb = int(y_bin_by_sample[i])
             for f in range(n_feat):
                 rows.append(
                     {
@@ -510,12 +521,12 @@ def main() -> None:
     n_layers = len(model_full.models_[0].transformer_encoder.layers)
     layers_used = [l for l in LAYERS if l <= n_layers]
 
-    repr_full = extract_stage_embeddings_v34(
+    repr_full_all = extract_stage_embeddings_v34(
         model_full,
-        X_train_attn,
+        np.asarray(X_train_scaled),
         layers_used,
         FEATURES,
-        train_row_indices=idx_global,
+        train_row_indices=np.arange(X_train_scaled.shape[0], dtype=np.int64),
     )
     repr_b10 = extract_stage_embeddings_v34(
         model_b10,
@@ -526,13 +537,17 @@ def main() -> None:
     )
 
     pca_rows = build_pca_rows(
-        repr_full=repr_full,
+        repr_full=repr_full_all,
         repr_b10=repr_b10,
         y_bin_by_sample=y_train_bin_attn,
+        idx_plot_global=idx_global,
     )
     pca_rows.to_csv(OUT_FEATURE_TOKEN_PCA_LONG, index=False)
 
-    print("Classifier checkpoint embedding / PCA rows complete.")
+    print(
+        "Classifier checkpoint embedding / PCA rows complete "
+        f"(Full PCA on N={X_train_scaled.shape[0]}×d; CSV Full+B10 rows n={n_b10} each)."
+    )
     print(f"Wrote: {OUT_FEATURE_TOKEN_PCA_LONG}")
     print("Attention CSV: run Code/3.3.attention.py. For Fig. 3 run Code/4.3.Fig.3.R.")
 
