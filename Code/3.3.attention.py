@@ -1,15 +1,16 @@
-#!/usr/bin/env python3
+#!/opt/anaconda3/bin/python
 # -*- coding: utf-8 -*-
 """
-3.5.attention.py — Attention diagnostics only (Fig. 3 panels (b)–(c) CSV).
+3.3.attention.py — Attention diagnostics only (Fig. 3 panels (b)–(c) CSV).
 
 ``predict`` + forward hooks on ``self_attn_between_features`` at ``LAYERS``;
 writes ``Data/Output/Diag/attention_feature_layers_long.csv``.
 
-Query pools match ``3.3.bagged.py``: Full = all train rows; B10 = all B10 bootstrap fit rows.
+Training rows, fixed target bins, scaler, and B10 indices match ``3.4.embedding.py``.
+Full = all filtered train rows; B10 = rows indexed by the same bootstrap draw as 3.4.
 Chunked ``predict`` avoids MPS/GPU OOM on large query matrices.
 
-Run ``3.3.bagged.py`` for ``feature_token_pca_layers_long.csv`` (embeddings + PCA rows).
+Run ``3.4.embedding.py`` for ``feature_token_pca_layers_long.csv`` (embeddings + PCA rows).
 
 Device: ``TABPFN_PREDICT_DEVICE`` (default ``auto``), or ``TABPFN_DEVICE`` if set.
 """
@@ -33,7 +34,7 @@ TARGET = "yH"
 FEATURES = ["xP", "SZA", "lcc", "mcc", "tcsw", "tcwv"]
 COMBO = "yHxP"
 
-N_TARGET_BINS = 7
+N_TARGET_CLASSES = 3  # fixed bins on normalized yH; must match ``target_fixed_bins`` (same as 3.4)
 N_ESTIMATORS = 1
 LAYERS = [1, 2, 3, 6, 9, 12]
 ATTENTION_PREDICT_CHUNK = 128
@@ -50,16 +51,18 @@ TABPFN_PREDICT_DEVICE = os.environ.get(
 )
 
 
-def quantile_bin_labels(y: pd.Series, n_bins: int) -> tuple[np.ndarray, np.ndarray]:
-    q = np.linspace(0.0, 1.0, n_bins + 1)
-    edges = np.quantile(y.to_numpy(dtype=float), q)
-    edges = np.unique(edges)
-    if len(edges) < 2:
-        raise RuntimeError("Failed to build quantile bins: target is nearly constant.")
-    yb = pd.cut(y, bins=edges, include_lowest=True, labels=False)
-    if yb.isna().any():
-        yb = yb.fillna(len(edges) - 2)
-    return yb.to_numpy(dtype=int), edges
+def target_fixed_bins(y: pd.Series) -> tuple[np.ndarray, np.ndarray]:
+    """Classes 0,1,2 for ``[0, 0.3)``, ``[0.3, 0.9)``, ``[0.9, 1.1]`` on normalized ``TARGET``; ``keep`` masks rows to retain."""
+    yv = y.to_numpy(dtype=float)
+    m0 = (yv >= 0.0) & (yv < 0.3)
+    m1 = (yv >= 0.3) & (yv < 0.9)
+    m2 = (yv >= 0.9) & (yv <= 1.1)
+    keep = m0 | m1 | m2
+    lab = np.full(len(yv), -1, dtype=np.int64)
+    lab[m0] = 0
+    lab[m1] = 1
+    lab[m2] = 2
+    return lab, keep
 
 
 def build_b10_indices(n_train: int) -> np.ndarray:
@@ -181,14 +184,19 @@ def main() -> None:
 
     yt = df["Time"].dt.year
     df_train = df.loc[yt == TRAIN_YEAR].copy()
+    y_train_bin, keep = target_fixed_bins(df_train[TARGET])
+    n_before = len(df_train)
+    df_train = df_train.loc[keep].reset_index(drop=True)
+    y_train_bin = y_train_bin[keep]
+    print(
+        f"Fixed target bins [0,0.3), [0.3,0.9), [0.9,1.1] on normalized {TARGET}: "
+        f"kept {len(df_train)} / {n_before} rows ({N_TARGET_CLASSES} classes)."
+    )
 
     X_train = df_train[FEATURES]
-    y_train = df_train[TARGET]
 
     scaler = sk.preprocessing.StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
-
-    y_train_bin, _ = quantile_bin_labels(y_train, N_TARGET_BINS)
 
     idx_b10 = build_b10_indices(n_train=X_train_scaled.shape[0])
 
@@ -222,7 +230,7 @@ def main() -> None:
 
     print("Attention extraction complete (chunked predict).")
     print(f"Wrote: {OUT_FEATURE_LONG}")
-    print("For PCA rows run Code/3.3.bagged.py; for Fig. 3 run Code/4.3.Fig.3.R.")
+    print("For PCA rows run Code/3.4.embedding.py; for Fig. 3 run Code/4.3.Fig.3.R.")
 
 
 if __name__ == "__main__":

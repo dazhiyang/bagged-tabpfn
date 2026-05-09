@@ -1,56 +1,61 @@
 #################################################################################
-# 4.3.Fig.3.R
-# (a) ΔRMSE vs unbagged TabPFN (ensemble C1–C10 one color, bagged TabPFN-B another).
-# (b)–(c) Code/3.5.attention.py; (d) Code/3.3.bagged.py PCA CSV.
+# 4.3.Fig.3.R — Fig 3 PDF (tex/Fig3.pdf).
+# (a) ΔRMSE vs TabPFN (baseline_tables.tex). (b) Attention + Δ attention heatmaps (one ggplot,
+# ggnewscale; facets Full / B10 / B10−Full × layers L3–L12). (c) Token PCA (PC1 vs PC2).
+# Layout: patchwork — top row (a)|(b) with top_row_widths, bottom row (c) full width.
 #################################################################################
 
 rm(list = ls(all = TRUE))
+
+if (!requireNamespace("ggnewscale", quietly = TRUE)) {
+  stop("Install ggnewscale: install.packages(\"ggnewscale\")")
+}
 
 suppressPackageStartupMessages({
   library(ggplot2)
   library(dplyr)
   library(tidyr)
-  library(gridExtra)
-  library(scattermore)
   library(scales)
+  library(ggnewscale)
+  library(patchwork)
+  library(scattermore)
 })
-invisible(utils::globalVariables(c(
-  "context", "stage", "token", "y_bin", "pc1", "pc2", "layer",
-  "from_token", "to_token", "attention", "combo_f", "series", "rmse_wm2_imp"
-)))
+invisible(utils::globalVariables(c("combo_f", "series", "rmse_wm2_imp")))
 
-#################################################################################
-# Parameter block (edit here only)
-#################################################################################
 project_path <- "/Users/seryangd/Library/CloudStorage/Dropbox/Working papers/Site_Adaptation"
 diag_dir <- file.path(project_path, "Data", "Output", "Diag")
 fig_dir <- file.path(project_path, "tex")
-
-pca_file <- file.path(diag_dir, "feature_token_pca_layers_long.csv")
 file_attn <- file.path(diag_dir, "attention_feature_layers_long.csv")
+pca_file <- file.path(diag_dir, "feature_token_pca_layers_long.csv")
 baseline_tex <- file.path(fig_dir, "baseline_tables.tex")
 fig_out <- file.path(fig_dir, "Fig3.pdf")
+fig_width_mm <- 160
+fig_height_mm <- 125
 n_label_bins <- 3L
+pca_pointsize <- 5
+# When fig_height_mm shrinks, **mm** / **pt** in themes & guides stay the same length on paper —
+# only panel drawing areas shrink → whitespace looks “stuck”. coord_fixed() letterboxing still
+# applies; Δ colorbar below uses **lines** so it scales with theme text (not fixed mm).
+rel_heights_bcd <- c(1.6, 1)
+top_row_widths <- c(4, 7)
+# Panel (a): baseline_tables.tex → ΔRMSE vs TabPFN (W m^-2).
+panel_a_margin_v_pt <- max(2, round(fig_height_mm * 0.055))
+panel_a_plot_margin_pt <- margin(panel_a_margin_v_pt, 1, panel_a_margin_v_pt, 1, "pt")
+panel_a_y_expand_top_mult <- 0.07
+# BC Delta bar: ggplot puts the guide in its own row under the axis title; theme_bw axis.title.x
+# bottom margin + legend.margin top create a visible gap under "To token". Patchwork stacks BC
+# directly on panel (c) with little external gap, so the bar can look nearer PCA than the axis title.
+bc_axis_title_x_margin <- margin(t = 0, r = 0, b = 0, l = 0, "pt")
+bc_legend_margin <- margin(t = 0, r = 0, b = 0, l = 4, "pt")
+pca_plot_margin <- margin(0, 1, 1, 1, "pt")
+# Δ legend on panel (b): vertical bar; heights in **lines** (see header comment).
+delta_legend_barheight <- 30
+delta_legend_barwidth <- 2.2
 
 base_font_family <- "Times"
 text_size_pt <- 8
 line_width_axis <- 0.25
-width_mm <- 160
-height_mm <- 160
-# Panel (d) PCA: scattermore point size (larger = bigger pixels). Facets use free x/y scales.
-pca_pointsize <- 5
 
-# Panel letters — layout matches Code/4.2.Fig.2.R (tag column + plot column per panel).
-panel_tag_col_mm <- 6
-panel_tag_inset_mm <- 0.75
-# Row 1 plot widths (a), (b), (c) — relative null units; increase middle value to widen (b).
-row1_plot_width_rel <- c(1, 1.3, 1.05)
-# Panel (a): extra plot margin / symmetric y-expand (ΔRMSE can be − / + vs TabPFN).
-panel_a_plot_margin_pt <- margin(20, 1, 20, 1, "pt")
-panel_a_y_expand_top_mult <- 0.07
-
-# Wong order from SKILL: 1 orange, 2 sky blue, 3 blue green, 4 pale violet,
-# 5 vermillion, 6 yellow, 7 blue, 8 black.
 wong <- c(
   orange = "#E69F00",
   sky_blue = "#56B4E9",
@@ -61,7 +66,7 @@ wong <- c(
   blue = "#0072B2",
   black = "#000000"
 )
-# TabPFN tokens only (panels b–d); strings match Code/4.1.Fig.1.R for these codes.
+
 token_label_expr <- c(
   xP = "italic(x)[P]",
   SZA = "italic(Z)",
@@ -87,48 +92,18 @@ combo_label_expr <- c(
 )
 combo_labeller_parsed <- ggplot2::as_labeller(combo_label_expr, label_parsed)
 
-#################################################################################
-# Read and format
-#################################################################################
-pca <- read.csv(pca_file, stringsAsFactors = FALSE)
-if (nrow(pca) == 0) {
-  stop("feature_token_pca_layers_long.csv is empty. Run Code/3.3.bagged.py first (PCA rows).")
-}
 attn <- read.csv(file_attn, stringsAsFactors = FALSE)
-if (nrow(attn) == 0) {
-  stop("attention_feature_layers_long.csv is empty. Run Code/3.5.attention.py first (attention CSV).")
-}
-
-feature_token_levels <- c("xP", "SZA", "lcc", "mcc", "tcsw", "tcwv", "label")
-pca <- pca %>%
-  mutate(
-    token = trimws(token),
-    y_bin = trimws(y_bin),
-    context = factor(context, levels = c("full", "b10"), labels = c("Full", "B10")),
-    stage = factor(stage, levels = c("Input", "L1", "L2", "L3", "L6", "L9", "L12")),
-    y_bin = factor(y_bin, levels = paste0("C", seq_len(n_label_bins)))
-  )
-tok_chr <- unique(as.character(pca$token))
-if (all(tok_chr %in% feature_token_levels)) {
-  pca <- pca %>% mutate(token = factor(token, levels = feature_token_levels))
-} else if (all(grepl("^token_[0-9]+$", tok_chr))) {
-  tok_levels <- tok_chr[order(as.integer(sub("^token_", "", tok_chr)))]
-  pca <- pca %>% mutate(token = factor(token, levels = tok_levels))
-} else {
-  pca <- pca %>% mutate(token = factor(token, levels = sort(tok_chr)))
-}
+if (nrow(attn) == 0) stop("attention CSV empty: ", file_attn)
 
 if (all(c("from_group", "to_group") %in% names(attn))) {
-  attn <- attn %>%
-    dplyr::rename(from_token = from_group, to_token = to_group)
+  attn <- attn %>% dplyr::rename(from_token = from_group, to_token = to_group)
 }
 if (all(c("from_feature", "to_feature") %in% names(attn))) {
-  attn <- attn %>%
-    dplyr::rename(from_token = from_feature, to_token = to_feature)
+  attn <- attn %>% dplyr::rename(from_token = from_feature, to_token = to_feature)
 }
 
 layer_levels <- c("L1", "L2", "L3", "L6", "L9", "L12")
-
+stage_levels_bc <- c("L3", "L6", "L9", "L12")
 token_order <- unique(c(
   attn %>% distinct(from_token) %>% pull(from_token),
   attn %>% distinct(to_token) %>% pull(to_token)
@@ -143,23 +118,53 @@ attn <- attn %>%
     to_token = factor(to_token, levels = token_order)
   )
 
-attn_fb <- attn %>%
-  filter(context %in% c("full", "b10"))
+attn_fb <- attn %>% filter(context %in% c("full", "b10"))
 
 attn_delta <- attn %>%
   filter(context %in% c("full", "b10")) %>%
   select(layer, from_token, to_token, context, attention) %>%
   tidyr::pivot_wider(names_from = context, values_from = attention) %>%
-  mutate(
-    context = "delta",
-    attention = b10 - full
-  ) %>%
+  mutate(context = "delta", attention = b10 - full) %>%
   select(layer, from_token, to_token, context, attention)
 
 attn_plot <- bind_rows(attn_fb, attn_delta) %>%
   mutate(
     context = factor(context, levels = c("full", "b10", "delta"), labels = c("Full", "B10", "B10 - Full"))
   )
+
+pca <- read.csv(pca_file, stringsAsFactors = FALSE)
+if (nrow(pca) == 0) stop("PCA CSV empty: ", pca_file)
+
+pca_feature_levels <- c("xP", "SZA", "lcc", "mcc", "tcsw", "tcwv", "label")
+pca <- pca %>%
+  mutate(
+    token = trimws(token),
+    y_bin = trimws(y_bin),
+    context = factor(context, levels = c("full", "b10"), labels = c("Full", "B10")),
+    stage = factor(stage, levels = c("Input", "L1", "L2", "L3", "L6", "L9", "L12")),
+    y_bin = factor(y_bin, levels = paste0("C", seq_len(n_label_bins)))
+  )
+tok_chr <- unique(as.character(pca$token))
+if (all(tok_chr %in% pca_feature_levels)) {
+  pca <- pca %>% mutate(token = factor(token, levels = pca_feature_levels))
+} else if (all(grepl("^token_[0-9]+$", tok_chr))) {
+  tok_levels <- tok_chr[order(as.integer(sub("^token_", "", tok_chr)))]
+  pca <- pca %>% mutate(token = factor(token, levels = tok_levels))
+} else {
+  pca <- pca %>% mutate(token = factor(token, levels = sort(tok_chr)))
+}
+
+pca_legend_tokens <- c("xP", "SZA", "lcc", "mcc", "tcsw", "tcwv")
+feat_cols <- c(
+  xP = unname(wong["orange"]),
+  SZA = unname(wong["sky_blue"]),
+  lcc = unname(wong["blue_green"]),
+  mcc = unname(wong["pale_violet"]),
+  tcsw = unname(wong["vermillion"]),
+  tcwv = unname(wong["yellow"])
+)
+feat_tokens_plot <- intersect(pca_legend_tokens, unique(as.character(pca$token)))
+feat_cols_plot <- feat_cols[feat_tokens_plot]
 
 delta_lim <- max(abs(attn_delta$attention), na.rm = TRUE)
 no_classes <- 10
@@ -168,9 +173,23 @@ quantiles <- sort(unique(quantiles))
 quantiles_rescaled <- scales::rescale(quantiles, to = c(0, 1), from = range(attn_fb$attention, na.rm = TRUE))
 quantile_cols <- viridisLite::viridis(length(quantiles))
 
-#################################################################################
-# Theme
-#################################################################################
+row_levels <- c("Full", "B10", "B10 - Full")
+df_b <- attn_fb %>%
+  filter(as.character(layer) %in% stage_levels_bc) %>%
+  mutate(
+    row_lab = factor(
+      ifelse(as.character(context) == "full", "Full", "B10"),
+      levels = row_levels
+    ),
+    stage_col = factor(as.character(layer), levels = stage_levels_bc)
+  )
+df_c <- attn_plot %>%
+  filter(as.character(context) == "B10 - Full", as.character(layer) %in% stage_levels_bc) %>%
+  mutate(
+    row_lab = factor("B10 - Full", levels = row_levels),
+    stage_col = factor(as.character(layer), levels = stage_levels_bc)
+  )
+
 theme_pub <- function() {
   theme_bw(base_size = text_size_pt, base_family = base_font_family) +
     theme(
@@ -180,7 +199,7 @@ theme_pub <- function() {
       legend.title = element_text(size = text_size_pt),
       legend.text = element_text(size = text_size_pt),
       strip.text = element_text(size = text_size_pt, margin = margin(1, 1, 1, 1, "pt")),
-      strip.switch.pad.grid = unit(0.4, "pt"),
+      strip.switch.pad.grid = grid::unit(0.4, "pt"),
       plot.title = element_blank(),
       plot.subtitle = element_blank(),
       panel.grid.major = element_line(
@@ -190,27 +209,25 @@ theme_pub <- function() {
       panel.grid.minor = element_blank(),
       panel.border = element_rect(colour = "black", linewidth = line_width_axis),
       panel.background = element_rect(fill = "white", colour = NA),
-      plot.background = element_rect(fill = "transparent", colour = NA),
+      plot.background = element_rect(fill = "white", colour = NA),
       plot.margin = margin(1, 1, 1, 1, "pt"),
       axis.text.x = element_text(angle = 0),
-      strip.background = element_rect(fill = "grey95")
+      strip.background = element_rect(fill = "grey95"),
+      strip.placement = "outside",
+      # Default tag placement uses plot margins → extra vertical strip + patchwork reads as row gap.
+      plot.tag.location = "topleft",
+      plot.tag = element_text(
+        family = base_font_family,
+        size = text_size_pt,
+        face = "plain",
+        margin = margin(0, 0, 0, 0, "pt"),
+        lineheight = 1
+      )
     )
 }
 
-panel_tag_grob <- function(label) {
-  inset <- grid::unit(panel_tag_inset_mm, "mm")
-  grid::textGrob(
-    label,
-    x = grid::unit(1, "npc") - inset,
-    y = grid::unit(1, "npc") - inset,
-    hjust = 1,
-    vjust = 1,
-    gp = grid::gpar(fontfamily = base_font_family, fontsize = text_size_pt, fontface = "plain")
-  )
-}
-
 #################################################################################
-# baseline_tables.tex → ΔRMSE vs TabPFN (W m^-2): ensemble-only data for panel (a)
+# Panel (a) — ΔRMSE vs unbagged TabPFN (baseline_tables.tex)
 #################################################################################
 cell_first_wm2 <- function(cell) {
   m <- regexpr("\\\\shortstack\\[c\\]\\{", cell, perl = TRUE)
@@ -298,10 +315,7 @@ bar_levels <- c(paste0("B", seq_len(10L)), "Bagged")
 bar_cols <- c(rep(unname(wong["sky_blue"]), 10L), unname(wong["orange"]))
 names(bar_cols) <- bar_levels
 
-#################################################################################
-# Plot — panel (a): ΔRMSE vs unbagged TabPFN (facet stripes match 4.2.Fig.2.R)
-#################################################################################
-p_rmse <- ggplot(panel_a_long, aes(x = series, y = rmse_wm2_imp, fill = series)) +
+panel_a <- ggplot(panel_a_long, aes(x = series, y = rmse_wm2_imp, fill = series)) +
   geom_hline(
     yintercept = 0,
     linetype = "dashed",
@@ -322,86 +336,17 @@ p_rmse <- ggplot(panel_a_long, aes(x = series, y = rmse_wm2_imp, fill = series))
   scale_x_discrete(drop = FALSE) +
   labs(
     x = NULL,
-    y = expression(Delta ~ RMSE ~ "(vs TabPFN)" ~ "[" * W ~ m^-2 * "]")
+    y = expression(Delta ~ RMSE ~ "(vs TabPFN)" ~ "[" * W ~ m^-2 * "]"),
+    tag = "(a)"
   ) +
   theme_pub() +
   theme(
     legend.position = "none",
     plot.margin = panel_a_plot_margin_pt,
     axis.text.x = element_text(angle = 55, hjust = 1, vjust = 1, size = text_size_pt * 0.85),
-    # Vertical strip labels (same sense as row facets for layer in panel b).
     strip.text.y.right = element_text(angle = -90, hjust = 0.5, vjust = 0.5, size = text_size_pt),
     strip.placement = "outside"
   )
-
-#################################################################################
-# Plot — panel (b): attention heatmaps (Full / B10)
-#################################################################################
-p_base <- ggplot(attn_fb %>% mutate(context = factor(context, levels = c("full", "b10"), labels = c("Full", "B10"))), aes(x = to_token, y = from_token, fill = attention)) +
-  geom_tile(colour = wong["black"], linewidth = 0.06) +
-  coord_fixed() +
-  facet_grid(layer ~ context, drop = FALSE) +
-  scale_fill_gradientn(
-    colours = quantile_cols,
-    values = quantiles_rescaled,
-    breaks = quantiles,
-    name = "Attention"
-  ) +
-  scale_x_discrete(labels = parse_token_labels) +
-  scale_y_discrete(labels = parse_token_labels) +
-  labs(x = "To token", y = "From token", title = NULL) +
-  theme_pub() +
-  theme(legend.position = "none")
-
-#################################################################################
-# Plot — panel (c): delta attention (B10 - Full)
-#################################################################################
-p_delta <- ggplot(attn_plot %>% filter(context == "B10 - Full"), aes(x = to_token, y = from_token, fill = attention)) +
-  geom_tile(colour = wong["black"], linewidth = 0.06) +
-  coord_fixed() +
-  facet_grid(layer ~ ., drop = FALSE) +
-  scale_fill_gradient2(
-    low = wong["orange"],
-    mid = "white",
-    high = wong["sky_blue"],
-    midpoint = 0,
-    limits = c(-delta_lim, delta_lim),
-    name = "Delta"
-  ) +
-  scale_x_discrete(labels = parse_token_labels) +
-  scale_y_discrete(labels = parse_token_labels) +
-  labs(x = "To token", y = "From token", title = NULL) +
-  theme_pub() +
-  theme(
-    legend.position = "right",
-    legend.box.spacing = grid::unit(0, "pt"),
-    legend.margin = margin(0, 0, 0, 4, "pt")
-  ) +
-  guides(
-    fill = guide_colorbar(
-      direction = "vertical",
-      barheight = grid::unit(42, "mm"),
-      barwidth = grid::unit(2.5, "mm"),
-      title.position = "top",
-      title.hjust = 0.5
-    )
-  )
-
-#################################################################################
-# Plot — panel (d): token PCA (PC1 vs PC2), colour = input feature (token)
-# Uses scattermore for speed.
-#################################################################################
-feat_token_levels <- c("xP", "SZA", "lcc", "mcc", "tcsw", "tcwv")
-feat_cols <- c(
-  xP = unname(wong["orange"]),
-  SZA = unname(wong["sky_blue"]),
-  lcc = unname(wong["blue_green"]),
-  mcc = unname(wong["pale_violet"]),
-  tcsw = unname(wong["vermillion"]),
-  tcwv = unname(wong["yellow"])
-)
-feat_tokens_plot <- intersect(feat_token_levels, unique(as.character(pca$token)))
-feat_cols_plot <- feat_cols[feat_tokens_plot]
 
 p_pca <- ggplot() +
   facet_grid(
@@ -438,62 +383,88 @@ p_pca <- p_pca +
     labels = parse_token_labels,
     name = NULL
   ) +
-  labs(x = "PC1", y = "PC2") +
+  labs(x = "PC1", y = "PC2", tag = "(c)") +
   theme_pub() +
   theme(
     legend.position = "right",
     legend.box.spacing = grid::unit(0, "pt"),
     legend.margin = margin(0, 0, 0, 0, "pt"),
-    axis.text = element_blank()
+    axis.ticks = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    plot.margin = pca_plot_margin
   ) +
   guides(colour = guide_legend(override.aes = list(size = 3.2, alpha = 1), ncol = 1))
 
-g_rmse <- ggplotGrob(p_rmse)
-g_a <- ggplotGrob(p_base)
-g_b <- ggplotGrob(p_delta)
-g_c <- ggplotGrob(p_pca)
-
-# Same arrangement pattern as 4.2.Fig.2.R: each panel is [tag mm column | plot null].
-row_abc <- gridExtra::arrangeGrob(
-  grobs = list(
-    panel_tag_grob("(a)"), g_rmse,
-    panel_tag_grob("(b)"), g_a,
-    panel_tag_grob("(c)"), g_b
-  ),
-  ncol = 6L,
-  widths = grid::unit(
-    c(
-      panel_tag_col_mm, row1_plot_width_rel[[1L]],
-      panel_tag_col_mm, row1_plot_width_rel[[2L]],
-      panel_tag_col_mm, row1_plot_width_rel[[3L]]
-    ),
-    c("mm", "null", "mm", "null", "mm", "null")
+# One plot: layer strips on top, row_lab strips on right (facet_grid default).
+fig_bc <- ggplot() +
+  facet_grid(rows = vars(row_lab), cols = vars(stage_col), drop = FALSE) +
+  geom_tile(
+    data = df_b,
+    aes(x = to_token, y = from_token, fill = attention),
+    colour = wong["black"],
+    linewidth = 0.06
+  ) +
+  scale_x_discrete(labels = parse_token_labels, expand = ggplot2::expansion(mult = c(0.02, 0.02))) +
+  scale_y_discrete(labels = parse_token_labels, expand = ggplot2::expansion(mult = c(0.02, 0.02))) +
+  scale_fill_gradientn(
+    colours = quantile_cols,
+    values = quantiles_rescaled,
+    breaks = quantiles,
+    name = "Attention",
+    guide = "none"
+  ) +
+  ggnewscale::new_scale_fill() +
+  geom_tile(
+    data = df_c,
+    aes(x = to_token, y = from_token, fill = attention),
+    colour = wong["black"],
+    linewidth = 0.06
+  ) +
+  scale_fill_gradient2(
+    low = wong["orange"],
+    mid = "white",
+    high = wong["sky_blue"],
+    midpoint = 0,
+    limits = c(-delta_lim, delta_lim),
+    name = "Delta",
+    guide = guide_colorbar(
+      direction = "vertical",
+      barheight = grid::unit(delta_legend_barheight, "mm"),
+      barwidth = grid::unit(delta_legend_barwidth, "mm"),
+      title.position = "top",
+      title.hjust = 0.5
+    )
+  ) +
+  coord_fixed(expand = FALSE) +
+  labs(x = "To token", y = "From token", title = NULL, tag = "(b)") +
+  theme_pub() +
+  theme(
+    legend.position = "right",
+    legend.box.spacing = grid::unit(0, "pt"),
+    legend.margin = bc_legend_margin,
+    axis.title.x = element_text(margin = bc_axis_title_x_margin),
+    plot.margin = margin(1, 1, 0, 1, "pt")
   )
-)
 
-row_d <- gridExtra::arrangeGrob(
-  grobs = list(panel_tag_grob("(d)"), g_c),
-  ncol = 2L,
-  widths = grid::unit(c(panel_tag_col_mm, 1), c("mm", "null"))
+# patchwork: plot_layout(widths=...) on (a|BC)/PCA often collapses to ~50:50. Using wrap_plots()
+# design allocates one grid cell per character — 3×"A" vs 7×"B" enforces top_row_widths literally.
+pw_top_cols <- sum(top_row_widths)
+pw_design <- paste0(
+  paste0(strrep("A", top_row_widths[[1L]]), strrep("B", top_row_widths[[2L]])),
+  "\n",
+  strrep("C", pw_top_cols)
 )
+fig_all <- patchwork::wrap_plots(A = panel_a, B = fig_bc, C = p_pca, design = pw_design) +
+  patchwork::plot_layout(heights = grid::unit(rel_heights_bcd, "null"), guides = "keep")
 
-fig <- gridExtra::arrangeGrob(
-  grobs = list(row_abc, row_d),
-  ncol = 1L,
-  heights = grid::unit(c(1, 0.5), "null"),
-  padding = grid::unit(1.2, "mm")
-)
-
-#################################################################################
-# Save figure (PDF)
-#################################################################################
 dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
-ggsave(
+ggplot2::ggsave(
   fig_out,
-  fig,
+  fig_all,
   device = grDevices::pdf,
-  width = width_mm,
-  height = height_mm,
+  width = fig_width_mm,
+  height = fig_height_mm,
   units = "mm",
   limitsize = FALSE,
   compress = TRUE,
