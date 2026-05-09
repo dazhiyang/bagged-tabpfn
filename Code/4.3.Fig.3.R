@@ -1,7 +1,7 @@
 #################################################################################
 # 4.3.Fig.3.R
 # (a) ΔRMSE vs unbagged TabPFN (ensemble C1–C10 one color, bagged TabPFN-B another).
-# (b)–(d) Code/3.4.attention.py outputs: Full/B10 attention, delta, PCA.
+# (b)–(c) Code/3.5.attention.py; (d) Code/3.3.bagged.py PCA CSV.
 #################################################################################
 
 rm(list = ls(all = TRUE))
@@ -37,8 +37,7 @@ text_size_pt <- 8
 line_width_axis <- 0.25
 width_mm <- 160
 height_mm <- 160
-# Panel (d) PCA: upper limit on PC1; scattermore point size (larger = bigger pixels).
-pca_pc1_xmax <- 25
+# Panel (d) PCA: scattermore point size (larger = bigger pixels). Facets use free x/y scales.
 pca_pointsize <- 5
 
 # Panel letters — layout matches Code/4.2.Fig.2.R (tag column + plot column per panel).
@@ -93,11 +92,11 @@ combo_labeller_parsed <- ggplot2::as_labeller(combo_label_expr, label_parsed)
 #################################################################################
 pca <- read.csv(pca_file, stringsAsFactors = FALSE)
 if (nrow(pca) == 0) {
-  stop("feature_token_pca_layers_long.csv is empty. Run Code/3.4.attention.py first.")
+  stop("feature_token_pca_layers_long.csv is empty. Run Code/3.3.bagged.py first (PCA rows).")
 }
 attn <- read.csv(file_attn, stringsAsFactors = FALSE)
 if (nrow(attn) == 0) {
-  stop("attention_feature_layers_long.csv is empty. Run Code/3.4.attention.py first.")
+  stop("attention_feature_layers_long.csv is empty. Run Code/3.5.attention.py first (attention CSV).")
 }
 
 feature_token_levels <- c("xP", "SZA", "lcc", "mcc", "tcsw", "tcwv", "label")
@@ -106,7 +105,7 @@ pca <- pca %>%
     token = trimws(token),
     y_bin = trimws(y_bin),
     context = factor(context, levels = c("full", "b10"), labels = c("Full", "B10")),
-    stage = factor(stage, levels = c("Input", "L3", "L6", "L9", "L12")),
+    stage = factor(stage, levels = c("Input", "L1", "L2", "L3", "L6", "L9", "L12")),
     y_bin = factor(y_bin, levels = paste0("C", seq_len(n_label_bins)))
   )
 tok_chr <- unique(as.character(pca$token))
@@ -128,7 +127,7 @@ if (all(c("from_feature", "to_feature") %in% names(attn))) {
     dplyr::rename(from_token = from_feature, to_token = to_feature)
 }
 
-layer_levels <- c("L3", "L6", "L9", "L12")
+layer_levels <- c("L1", "L2", "L3", "L6", "L9", "L12")
 
 token_order <- unique(c(
   attn %>% distinct(from_token) %>% pull(from_token),
@@ -408,6 +407,7 @@ p_pca <- ggplot() +
   facet_grid(
     context ~ stage,
     drop = FALSE,
+    scales = "free",
     labeller = labeller(context = label_value, stage = label_value)
   )
 
@@ -438,13 +438,13 @@ p_pca <- p_pca +
     labels = parse_token_labels,
     name = NULL
   ) +
-  coord_cartesian(xlim = c(NA, pca_pc1_xmax)) +
   labs(x = "PC1", y = "PC2") +
   theme_pub() +
   theme(
     legend.position = "right",
     legend.box.spacing = grid::unit(0, "pt"),
-    legend.margin = margin(0, 0, 0, 0, "pt")
+    legend.margin = margin(0, 0, 0, 0, "pt"),
+    axis.text = element_blank()
   ) +
   guides(colour = guide_legend(override.aes = list(size = 3.2, alpha = 1), ncol = 1))
 
