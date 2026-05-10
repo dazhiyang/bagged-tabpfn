@@ -1,8 +1,9 @@
 #################################################################################
 # 4.3.Fig.3.R — Fig 3 PDF (tex/Fig3.pdf).
-# (a) ΔRMSE vs TabPFN (baseline_tables.tex). (b) Attention + Δ attention heatmaps (one ggplot,
-#     ggnewscale; facets Full / B10 / B10−Full × layers L3–L12). (c) Token PCA (PC1 vs PC2) via
-#     ggh4x::facet_grid2(..., independent = "all") for facet_grid-style strips and per-panel free axes.
+# (a) ΔRMSE vs TabPFN for B1–B10 and TabPFN-B (baseline_tables.tex). (b) Attention + Δ attention
+#     heatmaps (one ggplot, ggnewscale; facets Full / B10 / B10−Full × layers L3–L12). (c) Token PCA
+#     (PC1 vs PC2) via ggh4x::facet_grid2(..., independent = "all") for facet_grid-style strips and
+#     per-panel free axes.
 # Layout: patchwork — top row (a)|(b) with top_row_widths, bottom row (c) full width.
 #################################################################################
 
@@ -232,7 +233,7 @@ theme_pub <- function() {
 }
 
 #################################################################################
-# Panel (a) — ΔRMSE vs unbagged TabPFN (baseline_tables.tex)
+# Panel (a) — ΔRMSE vs TabPFN from baseline_tables.tex (ensemble table: B1–B10 + bagged column → label TabPFN-B)
 #################################################################################
 cell_first_wm2 <- function(cell) {
   m <- regexpr("\\\\shortstack\\[c\\]\\{", cell, perl = TRUE)
@@ -280,7 +281,7 @@ read_baseline_imp_vs_tabpfn_long <- function(tex_path) {
     ref_tabpfn_rmse[co] <- cell_first_wm2(parts[[11L]])
   }
   ens_k <- seq_len(10L)
-  series_levels <- c(paste0("B", ens_k), "Bagged")
+  series_levels <- c(paste0("B", ens_k), "TabPFN-B")
   out <- list()
   for (ln in rows_ens) {
     if (!grepl("^\\$y_\\\\text\\{", ln)) next
@@ -303,7 +304,7 @@ read_baseline_imp_vs_tabpfn_long <- function(tex_path) {
     dm <- ref - ens[[11L]]
     out[[length(out) + 1L]] <- data.frame(
       combo = co,
-      series = "Bagged",
+      series = "TabPFN-B",
       rmse_wm2_imp = dm,
       stringsAsFactors = FALSE
     )
@@ -316,7 +317,7 @@ read_baseline_imp_vs_tabpfn_long <- function(tex_path) {
 }
 
 panel_a_long <- read_baseline_imp_vs_tabpfn_long(baseline_tex)
-bar_levels <- c(paste0("B", seq_len(10L)), "Bagged")
+bar_levels <- c(paste0("B", seq_len(10L)), "TabPFN-B")
 bar_cols <- c(rep(unname(wong["sky_blue"]), 10L), unname(wong["orange"]))
 names(bar_cols) <- bar_levels
 

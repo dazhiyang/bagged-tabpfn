@@ -8,11 +8,18 @@ writes ``Data/Output/Diag/attention_feature_layers_long.csv``.
 
 Training rows, fixed target bins, scaler, and B10 indices match ``3.4.embedding.py``.
 Full = all filtered train rows; B10 = rows indexed by the same bootstrap draw as 3.4.
-Chunked ``predict`` avoids MPS/GPU OOM on large query matrices.
+Chunked ``predict`` avoids MPS/GPU OOM on large query matrices; default chunk size is 512
+(fewer forwards than 128). Default device is ``mps``; override with ``TABPFN_PREDICT_DEVICE``
+or ``TABPFN_DEVICE``. To skip recomputation when the output CSV already exists, set
+``TABPFN_ATTENTION_SKIP_IF_EXISTS=1``.
+
+Heatmap interpretation (Fig. 3): attribute-wise attention across layers, including
+attention to the **label** token. Each matrix row is the attention weights **from** one
+attribute (query position) **to** all token groups (keys); the **last** row and **last**
+column correspond to the label (see ``feature_and_label_blocks``). Brighter shades =
+stronger aggregated attention between those blocks.
 
 Run ``3.4.embedding.py`` for ``feature_token_pca_layers_long.csv`` (embeddings + PCA rows).
-
-Device: ``TABPFN_PREDICT_DEVICE`` (default ``auto``), or ``TABPFN_DEVICE`` if set.
 """
 
 import os
@@ -37,7 +44,7 @@ COMBO = "yHxP"
 N_TARGET_CLASSES = 3  # fixed bins on normalized yH; must match ``target_fixed_bins`` (same as 3.4)
 N_ESTIMATORS = 1
 LAYERS = [1, 2, 3, 6, 9, 12]
-ATTENTION_PREDICT_CHUNK = 128
+ATTENTION_PREDICT_CHUNK = 512
 
 ENS_K = 10
 ENS_SEED = 123
@@ -47,7 +54,7 @@ COMBO_ORDER = ["yHxP", "yHxS", "yLxP", "yLxS"]
 
 TABPFN_PREDICT_DEVICE = os.environ.get(
     "TABPFN_PREDICT_DEVICE",
-    os.environ.get("TABPFN_DEVICE", "auto"),
+    os.environ.get("TABPFN_DEVICE", "mps"),
 )
 
 
@@ -169,6 +176,13 @@ def extract_attention(
 
 
 def main() -> None:
+    if (
+        os.environ.get("TABPFN_ATTENTION_SKIP_IF_EXISTS", "0") == "1"
+        and os.path.isfile(OUT_FEATURE_LONG)
+    ):
+        print(f"Skip attention run (TABPFN_ATTENTION_SKIP_IF_EXISTS=1): {OUT_FEATURE_LONG}")
+        return
+
     if not os.path.isfile(CHECKPOINT_FILE):
         raise FileNotFoundError(
             f"Checkpoint not found: {CHECKPOINT_FILE}\n"
