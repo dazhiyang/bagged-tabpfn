@@ -1,7 +1,8 @@
 .DS_Store
 .cursor/
 Code/old/
-Data/
+Data/*
+!Data/arranged15min.txt
 Data/Output/
 tex/*.pdf
 *.Rhistory
