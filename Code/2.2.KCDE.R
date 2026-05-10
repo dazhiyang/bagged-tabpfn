@@ -1,8 +1,11 @@
 #################################################################################
-# This code is written by Dazhi Yang (a) and Yun Chen (b)
-# (a) Department of Electrical Engineering and Automation, Harbin Institute of Technology
-# (b) Public Meteorological Service Center, China Meteorological Administration
-# emails: yangdazhi.nus@gmail.com, chenyunpku@163.com
+# This code is co-authored by:
+# - Dazhi Yang (yangdazhi.nus@gmail.com)
+#   School of Electrical Engineering and Automation,
+#   Harbin Institute of Technology (HIT)
+# - Yun Chen (PowerPuffYun) (chenyunpku@163.com)
+#   Public Meteorological Service Center,
+#   China Meteorological Administration (CMA)
 #################################################################################
 
 rm(list = ls(all = TRUE))

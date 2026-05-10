@@ -1,4 +1,14 @@
 #################################################################################
+# This code is co-authored by:
+# - Dazhi Yang (yangdazhi.nus@gmail.com)
+#   School of Electrical Engineering and Automation,
+#   Harbin Institute of Technology (HIT)
+# - Yun Chen (PowerPuffYun) (chenyunpku@163.com)
+#   Public Meteorological Service Center,
+#   China Meteorological Administration (CMA)
+#################################################################################
+
+#################################################################################
 # 4.2.Fig.EnsembleDiag.R — Comprehensive model diagnostics figure
 #################################################################################
 

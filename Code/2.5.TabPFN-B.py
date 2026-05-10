@@ -1,5 +1,14 @@
-#!/usr/bin/env python3
+#!/opt/anaconda3/bin/python
 # -*- coding: utf-8 -*-
+###############################################################################
+# This code is co-authored by:
+# - Dazhi Yang (yangdazhi.nus@gmail.com)
+#   School of Electrical Engineering and Automation,
+#   Harbin Institute of Technology (HIT)
+# - Yun Chen (PowerPuffYun) (chenyunpku@163.com)
+#   Public Meteorological Service Center,
+#   China Meteorological Administration (CMA)
+###############################################################################
 # Same data pipeline and predictors as Code/2.4.TabPFN.py (tabpfn_client + StandardScaler).
 # TabPFN-B (client): one output file per ensemble member m = 1…ENS_K.
 # Each member m = 1…ENS_K shares the same TabPFN random_state (ENS_SEED + m − 1).

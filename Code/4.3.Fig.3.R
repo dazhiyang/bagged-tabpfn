@@ -1,4 +1,14 @@
 #################################################################################
+# This code is co-authored by:
+# - Dazhi Yang (yangdazhi.nus@gmail.com)
+#   School of Electrical Engineering and Automation,
+#   Harbin Institute of Technology (HIT)
+# - Yun Chen (PowerPuffYun) (chenyunpku@163.com)
+#   Public Meteorological Service Center,
+#   China Meteorological Administration (CMA)
+#################################################################################
+
+#################################################################################
 # 4.3.Fig.3.R — Fig 3 PDF (tex/Fig3.pdf).
 # (a) ΔRMSE vs TabPFN for B1–B10 and TabPFN-B (baseline_tables.tex). (b) Attention + Δ attention
 #     heatmaps (one ggplot, ggnewscale; facets Full / B10 / B10−Full × layers L3–L12). (c) Token PCA

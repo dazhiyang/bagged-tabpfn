@@ -1,5 +1,14 @@
-#!/usr/bin/env python3
+#!/opt/anaconda3/bin/python
 # -*- coding: utf-8 -*-
+###############################################################################
+# This code is co-authored by:
+# - Dazhi Yang (yangdazhi.nus@gmail.com)
+#   School of Electrical Engineering and Automation,
+#   Harbin Institute of Technology (HIT)
+# - Yun Chen (PowerPuffYun) (chenyunpku@163.com)
+#   Public Meteorological Service Center,
+#   China Meteorological Administration (CMA)
+###############################################################################
 # Same data pipeline as Code/2.3.XGBoost.py (train/test years, scaler).
 # Predictors = retrieval + explicit ERA5 columns (cov_use in Code/2.1.MLR.R).
 # TabPFNRegressor() uses tabpfn_client defaults only. Writes Data/Output/TabPFN.txt.

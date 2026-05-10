@@ -1,6 +1,16 @@
-#!/usr/bin/env python3
+#!/opt/anaconda3/bin/python
 # -*- coding: utf-8 -*-
 """
+#################################################################################
+# This code is co-authored by:
+# - Dazhi Yang (yangdazhi.nus@gmail.com)
+#   School of Electrical Engineering and Automation, 
+#   Harbin Institute of Technology (HIT)
+# - Yun Chen (PowerPuffYun) (chenyunpku@163.com)
+#   Public Meteorological Service Center, 
+#   China Meteorological Administration (CMA)
+#################################################################################
+
 1.2 XAI — SHAP (TreeExplainer) results for **XGBoost**, combo **yHxS** (no figures).
 
 Same statistical setup as Code/2.3.XGBoost.py: clear-sky indices, cos(SZA),

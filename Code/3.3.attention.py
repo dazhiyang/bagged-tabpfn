@@ -1,6 +1,16 @@
 #!/opt/anaconda3/bin/python
 # -*- coding: utf-8 -*-
 """
+#################################################################################
+# This code is co-authored by:
+# - Dazhi Yang (yangdazhi.nus@gmail.com)
+#   School of Electrical Engineering and Automation,
+#   Harbin Institute of Technology (HIT)
+# - Yun Chen (PowerPuffYun) (chenyunpku@163.com)
+#   Public Meteorological Service Center,
+#   China Meteorological Administration (CMA)
+#################################################################################
+
 3.3.attention.py — Attention diagnostics only (Fig. 3 panels (b)–(c) CSV).
 
 ``predict`` + forward hooks on ``self_attn_between_features`` at ``LAYERS``;

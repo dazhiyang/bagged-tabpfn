@@ -1,7 +1,7 @@
 #################################################################################
 # This code is co-authored by:
 # - Dazhi Yang (yangdazhi.nus@gmail.com)
-#   Department of Electrical Engineering and Automation, 
+#   School of Electrical Engineering and Automation, 
 #   Harbin Institute of Technology (HIT)
 # - Yun Chen (PowerPuffYun) (chenyunpku@163.com)
 #   Public Meteorological Service Center, 

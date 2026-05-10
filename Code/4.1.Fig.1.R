@@ -1,4 +1,14 @@
 #################################################################################
+# This code is co-authored by:
+# - Dazhi Yang (yangdazhi.nus@gmail.com)
+#   School of Electrical Engineering and Automation,
+#   Harbin Institute of Technology (HIT)
+# - Yun Chen (PowerPuffYun) (chenyunpku@163.com)
+#   Public Meteorological Service Center,
+#   China Meteorological Administration (CMA)
+#################################################################################
+
+#################################################################################
 # 4.1.Fig.1.R — Composite manuscript figure (Site_Adaptation)
 #   Top    : yHxP scatter + marginal histograms via ggExtra::ggMarginal
 #            (dummy geom_point layer required for ggMarginal + geom_scattermore).
