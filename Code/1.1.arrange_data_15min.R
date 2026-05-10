@@ -1,8 +1,11 @@
 #################################################################################
-# This code is written by Dazhi Yang
-# Department of Electrical Engineering and Automation
-# Harbin Institute of Technology
-# emails: yangdazhi.nus@gmail.com
+# This code is co-authored by:
+# - Dazhi Yang (yangdazhi.nus@gmail.com)
+#   Department of Electrical Engineering and Automation, 
+#   Harbin Institute of Technology (HIT)
+# - Yun Chen (PowerPuffYun) (chenyunpku@163.com)
+#   Public Meteorological Service Center, 
+#   China Meteorological Administration (CMA)
 #################################################################################
 
 #Clear all workspace
