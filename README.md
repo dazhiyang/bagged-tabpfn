@@ -1,4 +1,4 @@
-# 📊 Site_Adaptation
+# 📊 TabPFN for Satellite Retrieval Correction
 
 📖 Research code for site adaptation experiments with retrieval-, regression-, and TabPFN-based models, manuscript figures, and TabPFN attention / embedding diagnostics.
 
