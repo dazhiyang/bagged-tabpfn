@@ -10,7 +10,8 @@
 
 #################################################################################
 # 4.3.Fig.3.R — Fig 3 PDF (tex/Fig3.pdf).
-# (a) ΔRMSE vs TabPFN for B1–B10 and TabPFN-B (baseline_tables.tex). (b) Attention + Δ attention
+# (a) ΔRMSE = RMSE_m − RMSE_TabPFN for B1–B10 and TabPFN-B (baseline_tables.tex);
+#     negative ⇒ improvement. (b) Attention + Δ attention
 #     heatmaps (one ggplot, ggnewscale; facets Full / B10 / B10−Full × layers L3–L12). (c) Token PCA
 #     (PC1 vs PC2) via ggh4x::facet_grid2(..., independent = "all") for facet_grid-style strips and
 #     per-panel free axes.
@@ -54,7 +55,7 @@ pca_pointsize <- 5
 # applies; Δ colorbar below uses **lines** so it scales with theme text (not fixed mm).
 rel_heights_bcd <- c(1.6, 1)
 top_row_widths <- c(4, 7)
-# Panel (a): baseline_tables.tex → ΔRMSE vs TabPFN (W m^-2).
+# Panel (a): baseline_tables.tex → ΔRMSE = RMSE_m − RMSE_TabPFN (W m^-2); negative = better.
 panel_a_margin_v_pt <- max(2, round(fig_height_mm * 0.055))
 panel_a_plot_margin_pt <- margin(panel_a_margin_v_pt, 1, panel_a_margin_v_pt, 1, "pt")
 panel_a_y_expand_top_mult <- 0.07
@@ -243,7 +244,7 @@ theme_pub <- function() {
 }
 
 #################################################################################
-# Panel (a) — ΔRMSE vs TabPFN from baseline_tables.tex (ensemble table: B1–B10 + bagged column → label TabPFN-B)
+# Panel (a) — ΔRMSE = RMSE_m − RMSE_TabPFN (ensemble table: B1–B10 + bagged column → TabPFN-B)
 #################################################################################
 cell_first_wm2 <- function(cell) {
   m <- regexpr("\\\\shortstack\\[c\\]\\{", cell, perl = TRUE)
@@ -303,7 +304,7 @@ read_baseline_imp_vs_tabpfn_long <- function(tex_path) {
     if (!is.finite(ref)) stop("Missing TabPFN RMSE for combo ", co)
     ens <- vapply(parts[seq_len(length(series_levels)) + 1L], cell_first_wm2, numeric(1L))
     for (k in ens_k) {
-      dm <- ref - ens[[k]]
+      dm <- ens[[k]] - ref
       out[[length(out) + 1L]] <- data.frame(
         combo = co,
         series = paste0("B", k),
@@ -311,7 +312,7 @@ read_baseline_imp_vs_tabpfn_long <- function(tex_path) {
         stringsAsFactors = FALSE
       )
     }
-    dm <- ref - ens[[11L]]
+    dm <- ens[[11L]] - ref
     out[[length(out) + 1L]] <- data.frame(
       combo = co,
       series = "TabPFN-B",
@@ -352,7 +353,7 @@ panel_a <- ggplot(panel_a_long, aes(x = series, y = rmse_wm2_imp, fill = series)
   scale_x_discrete(drop = FALSE) +
   labs(
     x = NULL,
-    y = expression(Delta ~ RMSE ~ "(vs TabPFN)" ~ "[" * W ~ m^-2 * "]"),
+    y = expression(Delta * RMSE ~ "[" * W ~ m^-2 * "]"),
     tag = "(a)"
   ) +
   theme_pub() +

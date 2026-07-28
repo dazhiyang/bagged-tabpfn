@@ -74,6 +74,8 @@ wong <- c(
 
 # Continuous colour: viridis family only (skill default).
 viridis_continuous_option <- "viridis"
+shap_viridis_continuous_option <- "inferno" # panel (b) only
+shap_colorbar_label <- "Feature value (percentile)" # vertical text beside colourbar
 
 # Panel (b): SHAP feature column names → plotmath strings for parse(text=…) on y-axis.
 feature_label_expr <- c(
@@ -316,15 +318,16 @@ p.shap <- ggplot(shap.df, aes(x = shap_value, y = feature_disp, colour = feat_u)
   scale_y_discrete(breaks = feat_label_txt, labels = parse(text = feat_label_txt)) +
   scale_x_continuous(limits = shap_x_lim, expand = c(0, 0)) +
   ggplot2::scale_colour_viridis_c(
-    option = viridis_continuous_option,
+    option = shap_viridis_continuous_option,
     limits = c(0, 1),
-    name = NULL,
+    name = shap_colorbar_label,
     guide = guide_colourbar(
       direction = "vertical",
       barwidth = unit(text_size_pt * 0.55, "pt"),
       barheight = unit(text_size_pt * 12, "pt"),
       title.position = "right",
-      title.hjust = 0.5
+      title.hjust = 0.5,
+      title.vjust = 0.5
     )
   ) +
   labs(x = "SHAP value", y = NULL) +
@@ -332,6 +335,13 @@ p.shap <- ggplot(shap.df, aes(x = shap_value, y = feature_disp, colour = feat_u)
   theme(
     panel.grid.major.y = element_blank(),
     legend.position = "right",
+    legend.title = element_text(
+      angle = 90,
+      size = text_size_pt,
+      family = base_font_family,
+      hjust = 0.5,
+      vjust = 0.5
+    ),
     plot.margin = shap_plot_margin_pt
   )
 
