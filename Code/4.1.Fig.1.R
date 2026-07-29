@@ -32,6 +32,17 @@ suppressPackageStartupMessages({
   library(scattermore)
 })
 
+# Avoid accidental Rplots.pdf under Rscript (ggMarginal may touch the default device).
+if (!interactive()) {
+  grDevices::pdf(NULL)
+  on.exit(
+    {
+      while (grDevices::dev.cur() > 1L) grDevices::dev.off()
+    },
+    add = TRUE
+  )
+}
+
 invisible(utils::globalVariables(c("density", "density_pct", "feat_u")))
 
 #################################################################################

@@ -30,15 +30,56 @@ COMBO_LATEX = {
 }
 
 # Must match suggest_params() in Code/2.3.XGBoost.py
+# (parameter name/symbol, code name, search range)
 SEARCH_SPACE = [
-    ("n_estimators", r"$n_\text{estimators}$", r"$[100,\,1500]$ (integer)"),
-    ("max_depth", r"$d_\text{max}$", r"$[3,\,12]$ (integer)"),
-    ("learning_rate", r"$\eta$", r"$[0.01,\,0.3]$ (log-uniform)"),
-    ("subsample", r"subsample", r"$[0.5,\,1]$ (uniform)"),
-    ("colsample_bytree", r"colsample_bytree", r"$[0.5,\,1]$ (uniform)"),
-    ("min_child_weight", r"min_child_weight", r"$[0.5,\,10]$ (log-uniform)"),
-    ("reg_lambda", r"$\lambda$", r"$[10^{-3},\,10]$ (log-uniform)"),
-    ("reg_alpha", r"$\alpha$", r"$[10^{-3},\,10]$ (log-uniform)"),
+    (
+        r"Number of trees",
+        r"\texttt{n\_estimators}",
+        r"$[100,\,1500]$ (integer)",
+        "n_estimators",
+    ),
+    (
+        r"Maximum tree depth",
+        r"\texttt{max\_depth}",
+        r"$[3,\,12]$ (integer)",
+        "max_depth",
+    ),
+    (
+        r"Learning rate ($\eta$)",
+        r"\texttt{learning\_rate}",
+        r"$[0.01,\,0.3]$ (log-uniform)",
+        "learning_rate",
+    ),
+    (
+        r"Row subsample ratio",
+        r"\texttt{subsample}",
+        r"$[0.5,\,1]$ (uniform)",
+        "subsample",
+    ),
+    (
+        r"Column subsample ratio",
+        r"\texttt{colsample\_bytree}",
+        r"$[0.5,\,1]$ (uniform)",
+        "colsample_bytree",
+    ),
+    (
+        r"Minimum child weight",
+        r"\texttt{min\_child\_weight}",
+        r"$[0.5,\,10]$ (log-uniform)",
+        "min_child_weight",
+    ),
+    (
+        r"$\ell_2$ regularization ($\lambda$)",
+        r"\texttt{reg\_lambda}",
+        r"$[10^{-3},\,10]$ (log-uniform)",
+        "reg_lambda",
+    ),
+    (
+        r"$\ell_1$ regularization ($\alpha$)",
+        r"\texttt{reg\_alpha}",
+        r"$[10^{-3},\,10]$ (log-uniform)",
+        "reg_alpha",
+    ),
 ]
 
 
@@ -68,22 +109,23 @@ def main() -> None:
         f"% Source: {PARAMS_PATH.name}; Optuna TPE, {n_trials} trials, {n_cv}-fold CV per combo.",
         r"\begin{table}[!ht]",
         r"\centering",
-        r"\caption{XGBoost hyperparameter optimization with Optuna TPE. An independent study "
-        rf"({n_trials} trials, {n_cv}-fold CV on the 2024 training year) is run for each "
-        r"$(y,x)$ configuration. Search ranges are listed together with the selected values.}",
+        r"\caption{XGBoost hyperparameter optimization with Optuna TPE. Hyperparameters are "
+        rf"tuned separately for each $(y,x)$ configuration ({n_trials} trials, {n_cv}-fold CV "
+        r"on the 2024 training year). Parameter names and symbols are listed with the "
+        r"corresponding code identifiers, search ranges, and selected values.}",
         r"\label{tb:xgb_hparams}",
         r"\small",
-        r"\begin{tabular}{ll" + "c" * len(COMBO_ORDER) + "}",
+        r"\begin{tabular}{lll" + "c" * len(COMBO_ORDER) + "}",
         r"\toprule",
-        r"Parameter & Search range & "
+        r"Parameter & Code name & Search range & "
         + " & ".join(COMBO_LATEX[c] for c in COMBO_ORDER)
         + r" \\",
         r"\midrule",
     ]
 
-    for key, lab, rng in SEARCH_SPACE:
+    for lab, code, rng, key in SEARCH_SPACE:
         cells = [_fmt_val(key, float(by_combo[c][key])) for c in COMBO_ORDER]
-        lines.append(f"{lab} & {rng} & " + " & ".join(cells) + r" \\")
+        lines.append(f"{lab} & {code} & {rng} & " + " & ".join(cells) + r" \\")
 
     lines.extend(
         [

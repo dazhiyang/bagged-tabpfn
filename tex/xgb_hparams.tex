@@ -2,21 +2,21 @@
 % Source: XGBoost_best_params.txt; Optuna TPE, 100 trials, 3-fold CV per combo.
 \begin{table}[!ht]
 \centering
-\caption{XGBoost hyperparameter optimization with Optuna TPE. An independent study (100 trials, 3-fold CV on the 2024 training year) is run for each $(y,x)$ configuration. Search ranges are listed together with the selected values.}
+\caption{XGBoost hyperparameter optimization with Optuna TPE. Hyperparameters are tuned separately for each $(y,x)$ configuration (100 trials, 3-fold CV on the 2024 training year). Parameter names and symbols are listed with the corresponding code identifiers, search ranges, and selected values.}
 \label{tb:xgb_hparams}
 \small
-\begin{tabular}{llcccc}
+\begin{tabular}{lllcccc}
 \toprule
-Parameter & Search range & $y_\text{H},\, x_\text{P}$ & $y_\text{H},\, x_\text{S}$ & $y_\text{L},\, x_\text{P}$ & $y_\text{L},\, x_\text{S}$ \\
+Parameter & Code name & Search range & $y_\text{H},\, x_\text{P}$ & $y_\text{H},\, x_\text{S}$ & $y_\text{L},\, x_\text{P}$ & $y_\text{L},\, x_\text{S}$ \\
 \midrule
-$n_\text{estimators}$ & $[100,\,1500]$ (integer) & 586 & 487 & 725 & 998 \\
-$d_\text{max}$ & $[3,\,12]$ (integer) & 3 & 3 & 4 & 4 \\
-$\eta$ & $[0.01,\,0.3]$ (log-uniform) & 0.02823 & 0.07352 & 0.01567 & 0.02397 \\
-subsample & $[0.5,\,1]$ (uniform) & 0.769 & 0.727 & 0.699 & 0.573 \\
-colsample_bytree & $[0.5,\,1]$ (uniform) & 0.967 & 0.987 & 0.919 & 0.844 \\
-min_child_weight & $[0.5,\,10]$ (log-uniform) & 2.388 & 1.002 & 1.043 & 1.087 \\
-$\lambda$ & $[10^{-3},\,10]$ (log-uniform) & 0.004246 & 0.01683 & 0.005677 & 0.00327 \\
-$\alpha$ & $[10^{-3},\,10]$ (log-uniform) & 3.281 & 2.814 & 1.913 & 4.412 \\
+Number of trees & \texttt{n\_estimators} & $[100,\,1500]$ (integer) & 586 & 487 & 725 & 998 \\
+Maximum tree depth & \texttt{max\_depth} & $[3,\,12]$ (integer) & 3 & 3 & 4 & 4 \\
+Learning rate ($\eta$) & \texttt{learning\_rate} & $[0.01,\,0.3]$ (log-uniform) & 0.02823 & 0.07352 & 0.01567 & 0.02397 \\
+Row subsample ratio & \texttt{subsample} & $[0.5,\,1]$ (uniform) & 0.769 & 0.727 & 0.699 & 0.573 \\
+Column subsample ratio & \texttt{colsample\_bytree} & $[0.5,\,1]$ (uniform) & 0.967 & 0.987 & 0.919 & 0.844 \\
+Minimum child weight & \texttt{min\_child\_weight} & $[0.5,\,10]$ (log-uniform) & 2.388 & 1.002 & 1.043 & 1.087 \\
+$\ell_2$ regularization ($\lambda$) & \texttt{reg\_lambda} & $[10^{-3},\,10]$ (log-uniform) & 0.004246 & 0.01683 & 0.005677 & 0.00327 \\
+$\ell_1$ regularization ($\alpha$) & \texttt{reg\_alpha} & $[10^{-3},\,10]$ (log-uniform) & 3.281 & 2.814 & 1.913 & 4.412 \\
 \bottomrule
 \end{tabular}
 \normalsize

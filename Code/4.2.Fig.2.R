@@ -14,6 +14,17 @@
 
 rm(list = ls(all = TRUE))
 
+# Avoid accidental Rplots.pdf under Rscript (default graphics device).
+if (!interactive()) {
+  grDevices::pdf(NULL)
+  on.exit(
+    {
+      while (grDevices::dev.cur() > 1L) grDevices::dev.off()
+    },
+    add = TRUE
+  )
+}
+
 suppressPackageStartupMessages({
   library(dplyr)
   library(tidyr)

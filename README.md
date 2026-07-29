@@ -33,7 +33,7 @@ Used by **`Code/3.4.attention.py`**, **`Code/3.5.embedding.py`**, and **`Code/3.
 | File | What it does |
 |------|----------------|
 | **`1.1.arrange_data_15min.R`** | End-to-end arrangement of raw inputs (NCDF, SolarData, etc.) into **`Data/arranged15min.txt`** (15 min aggregates, solar geometry, covariates). Paths include external raw-data dirs—edit `dir.data` / `dir0` for your machine. |
-| **`1.2.XAI.py`** | **SHAP** (`TreeExplainer`) for **XGBoost**, same splits/features as `2.3.XGBoost.py`; writes **`Data/xai_yHxP.txt`** (configurable via `DATA_OUT_DIR`) for **`4.1.Fig.1.R`**. |
+| **`1.2.XAI.py`** | **SHAP** (`TreeExplainer`) for feature importance analysis; writes **`Data/xai_yHxP.txt`** (configurable via `DATA_OUT_DIR`) for **`4.1.Fig.1.R`**. |
 
 ### `2.*` — Baselines & cloud TabPFN predictions
 
@@ -50,7 +50,7 @@ Used by **`Code/3.4.attention.py`**, **`Code/3.5.embedding.py`**, and **`Code/3.
 
 | File | What it does |
 |------|----------------|
-| **`3.1.xgb_hparams_table.py`** | Builds SI LaTeX table of XGBoost Optuna search ranges + selected values from **`Data/Output/XGBoost_best_params.txt`** → **`tex/xgb_hparams.tex`**. |
+| **`3.1.xgb_hparams_table.py`** | Builds LaTeX table of XGBoost Optuna search ranges + selected values from **`Data/Output/XGBoost_best_params.txt`** → **`tex/xgb_hparams.tex`**. |
 | **`3.2.overall_metric.R`** | Aggregates method outputs + TabPFN-B ensemble files; writes **`tex/baseline_tables.tex`** (RMSE/MBE tables used by Fig. 3 panel **(a)**). Expects `ENS_K` aligned with `2.5.TabPFN-B.py`. |
 | **`3.3.MW-Stats.R`** | **Murphy–Winkler** decomposition statistics from model output files → summary tables / diagnostics (see script headers for targets). |
 | **`3.4.attention.py`** | **Attention heatmaps data**: hooks `self_attn_between_features`, chunked `predict`, **full vs B10** contexts → **`Data/Output/Diag/attention_feature_layers_long.csv`**. Uses **`tabpfn-v2-classifier-gn2p4bpt.ckpt`**. |
