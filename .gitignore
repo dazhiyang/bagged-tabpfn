@@ -9,3 +9,4 @@ tex/*.pdf
 *.RData
 __pycache__/
 *.pyc
+Revision1/

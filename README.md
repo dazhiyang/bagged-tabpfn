@@ -22,7 +22,7 @@ Local **TabPFN v2 classifier** weights file (project root):
 
 **`tabpfn-v2-classifier-gn2p4bpt.ckpt`**
 
-Used by **`Code/3.3.attention.py`**, **`Code/3.4.embedding.py`**, and **`Code/3.10.mininalExample.py`** (`CHECKPOINT_FILE` / `model_path`). Place this file at the repo root or edit each script’s path. These scripts use the **pip `tabpfn`** stack (not `tabpfn_client`).
+Used by **`Code/3.4.attention.py`**, **`Code/3.5.embedding.py`**, and **`Code/3.10.mininalExample.py`** (`CHECKPOINT_FILE` / `model_path`). Place this file at the repo root or edit each script’s path. These scripts use the **pip `tabpfn`** stack (not `tabpfn_client`).
 
 ---
 
@@ -42,7 +42,7 @@ Used by **`Code/3.3.attention.py`**, **`Code/3.4.embedding.py`**, and **`Code/3.
 | **`2.0.raw.R`** | **Raw retrieval vs observation** (no bias correction); test-year rows only → **`Data/Output/raw.txt`** (`Time`, `combo`, `y`, `x`, W·m⁻²). |
 | **`2.1.MLR.R`** | **Multiple linear regression** (clear-sky index workflow + ERA5 covariates) → **`Data/Output/MLR.txt`**. |
 | **`2.2.KCDE.R`** | **KCDE** density-regression baseline → **`Data/Output/KCDE.txt`**. |
-| **`2.3.XGBoost.py`** | **XGBoost** + `GridSearchCV`; same predictors as MLR pipeline → **`Data/Output/XGBoost.txt`**. |
+| **`2.3.XGBoost.py`** | **XGBoost** + Optuna TPE (independent per combo); writes **`Data/Output/XGBoost.txt`** and **`XGBoost_best_params.txt`**. |
 | **`2.4.TabPFN.py`** | **TabPFN regressor** via **`tabpfn_client`** (API / cloud defaults, e.g. v2.5) → **`Data/Output/TabPFN.txt`**. |
 | **`2.5.TabPFN-B.py`** | **Bagged TabPFN-B**: ensemble members with bootstrap draws → **`Data/Output/TabPFN-B{m}.txt`** for each member `m`. |
 
@@ -50,11 +50,12 @@ Used by **`Code/3.3.attention.py`**, **`Code/3.4.embedding.py`**, and **`Code/3.
 
 | File | What it does |
 |------|----------------|
-| **`3.1.overall_metric.R`** | Aggregates method outputs + TabPFN-B ensemble files; writes **`tex/baseline_tables.tex`** (RMSE/MBE tables used by Fig. 3 panel **(a)**). Expects `ENS_K` aligned with `2.5.TabPFN-B.py`. |
-| **`3.2.MW-Stats.R`** | **Murphy–Winkler** decomposition statistics from model output files → summary tables / diagnostics (see script headers for targets). |
-| **`3.3.attention.py`** | **Attention heatmaps data**: hooks `self_attn_between_features`, chunked `predict`, **full vs B10** contexts → **`Data/Output/Diag/attention_feature_layers_long.csv`**. Uses **`tabpfn-v2-classifier-gn2p4bpt.ckpt`**. |
-| **`3.4.embedding.py`** | **Token embeddings + PCA** for Fig. 3 panel **(c)** (Full vs B10, staged Input/L layers) → **`Data/Output/Diag/feature_token_pca_layers_long.csv`**. Uses **`tabpfn-v2-classifier-gn2p4bpt.ckpt`**. Run **`3.3.attention.py`** separately for panels **(b)**–**(c)** attention part. |
-| **`3.10.mininalExample.py`** | Standalone **attribute-token PCA / diagnostic PNGs** (minimal TabPFN hook demo). Uses **`tabpfn-v2-classifier-gn2p4bpt.ckpt`**; not required for main `4.3.Fig.3.R` if you already run `3.4`. |
+| **`3.1.xgb_hparams_table.py`** | Builds SI LaTeX table of XGBoost Optuna search ranges + selected values from **`Data/Output/XGBoost_best_params.txt`** → **`tex/xgb_hparams.tex`**. |
+| **`3.2.overall_metric.R`** | Aggregates method outputs + TabPFN-B ensemble files; writes **`tex/baseline_tables.tex`** (RMSE/MBE tables used by Fig. 3 panel **(a)**). Expects `ENS_K` aligned with `2.5.TabPFN-B.py`. |
+| **`3.3.MW-Stats.R`** | **Murphy–Winkler** decomposition statistics from model output files → summary tables / diagnostics (see script headers for targets). |
+| **`3.4.attention.py`** | **Attention heatmaps data**: hooks `self_attn_between_features`, chunked `predict`, **full vs B10** contexts → **`Data/Output/Diag/attention_feature_layers_long.csv`**. Uses **`tabpfn-v2-classifier-gn2p4bpt.ckpt`**. |
+| **`3.5.embedding.py`** | **Token embeddings + PCA** for Fig. 3 panel **(c)** (Full vs B10, staged Input/L layers) → **`Data/Output/Diag/feature_token_pca_layers_long.csv`**. Uses **`tabpfn-v2-classifier-gn2p4bpt.ckpt`**. Run **`3.4.attention.py`** separately for panels **(b)**–**(c)** attention part. |
+| **`3.10.mininalExample.py`** | Standalone **attribute-token PCA / diagnostic PNGs** (minimal TabPFN hook demo). Uses **`tabpfn-v2-classifier-gn2p4bpt.ckpt`**; not required for main `4.3.Fig.3.R` if you already run `3.5`. |
 
 ### `4.*` — Manuscript figures
 
@@ -77,13 +78,13 @@ Most scripts use a **hardcoded `project_path` / `dir0`** pointing at the origina
 
 1. **`Code/1.1.arrange_data_15min.R`** — Build / maintain `Data/arranged15min.txt`.
 2. **`Code/2.*`** — Baselines (e.g. MLR, KCDE, XGBoost), raw retrieval export, TabPFN / TabPFN-B client predictions; outputs under `Data/Output/`.
-3. **`Code/3.*`** — Overall metrics, Murphy–Winkler stats, **TabPFN attention** (`3.3.attention.py`) and **token PCA / embeddings** (`3.4.embedding.py`) for Fig. 3; optional minimal embedding example (`3.10.mininalExample.py`).
+3. **`Code/3.*`** — XGBoost hparam SI table (`3.1`), overall metrics (`3.2`), Murphy–Winkler (`3.3`), **TabPFN attention** (`3.4.attention.py`) and **token PCA / embeddings** (`3.5.embedding.py`) for Fig. 3; optional minimal embedding example (`3.10.mininalExample.py`).
 4. **`Code/4.*`** — Assemble **Fig. 1–3** PDFs in `tex/` (e.g. run `4.3.Fig.3.R` after the Diag CSVs exist).
 
 ### 🔧 Environment variables (optional)
 
-- **`3.3.attention.py`**: `TABPFN_PREDICT_DEVICE`, `TABPFN_DEVICE` (default in script: `mps`); `TABPFN_ATTENTION_SKIP_IF_EXISTS=1` skips a rerun if the attention CSV already exists.
-- **`3.4.embedding.py`**: `TABPFN_EMBED_DEVICE` (default `cpu`).
+- **`3.4.attention.py`**: `TABPFN_PREDICT_DEVICE`, `TABPFN_DEVICE` (default in script: `mps`); `TABPFN_ATTENTION_SKIP_IF_EXISTS=1` skips a rerun if the attention CSV already exists.
+- **`3.5.embedding.py`**: `TABPFN_EMBED_DEVICE` (default `cpu`).
 
 ## ⚖️ License
 

@@ -96,7 +96,7 @@ combo_labeller_parsed <- as_labeller(combo_label_expr, label_parsed)
 dir0 <- normalizePath(file.path(.get.script.dir(), ".."), mustWork = FALSE)
 out_dir <- Sys.getenv("OUTPUT_DIR", file.path(dir0, "Data", "Output"))
 out.fig <- Sys.getenv("OUTPUT_FIG", file.path(dir0, "tex", "Fig2.pdf"))
-# Panel (f) reads machine-readable stats from 3.2.MW-Stats.R (same run as MW_Decomposition.tex).
+# Panel (f) reads machine-readable stats from 3.3.MW-Stats.R (same run as MW_Decomposition.tex).
 # MW_Stats.txt is still written by 3.2; the .tex file is for tables only, not parsed here.
 mw_stats_file <- Sys.getenv("MW_STATS_FILE", file.path(out_dir, "MW_Stats.txt"))
 
@@ -412,7 +412,7 @@ p_share <- ggplot(best_share, aes(x = combo_f, y = share, fill = model_f)) +
 if (!file.exists(mw_stats_file)) {
   stop(
     "Missing MW stats file: ", mw_stats_file,
-    "\nRun Code/3.2.MW-Stats.R first (writes MW_Stats.txt for this plot and MW_Decomposition.tex for tables)."
+    "\nRun Code/3.3.MW-Stats.R first (writes MW_Stats.txt for this plot and MW_Decomposition.tex for tables)."
   )
 }
 

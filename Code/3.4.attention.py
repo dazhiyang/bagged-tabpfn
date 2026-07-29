@@ -11,13 +11,13 @@
 #   China Meteorological Administration (CMA)
 #################################################################################
 
-3.3.attention.py — Attention diagnostics only (Fig. 3 panels (b)–(c) CSV).
+3.4.attention.py — Attention diagnostics only (Fig. 3 panels (b)–(c) CSV).
 
 ``predict`` + forward hooks on ``self_attn_between_features`` at ``LAYERS``;
 writes ``Data/Output/Diag/attention_feature_layers_long.csv``.
 
-Training rows, fixed target bins, scaler, and B10 indices match ``3.4.embedding.py``.
-Full = all filtered train rows; B10 = rows indexed by the same bootstrap draw as 3.4.
+Training rows, fixed target bins, scaler, and B10 indices match ``3.5.embedding.py``.
+Full = all filtered train rows; B10 = rows indexed by the same bootstrap draw as 3.5.
 Chunked ``predict`` avoids MPS/GPU OOM on large query matrices; default chunk size is 512
 (fewer forwards than 128). Default device is ``mps``; override with ``TABPFN_PREDICT_DEVICE``
 or ``TABPFN_DEVICE``. To skip recomputation when the output CSV already exists, set
@@ -29,7 +29,7 @@ attribute (query position) **to** all token groups (keys); the **last** row and 
 column correspond to the label (see ``feature_and_label_blocks``). Brighter shades =
 stronger aggregated attention between those blocks.
 
-Run ``3.4.embedding.py`` for ``feature_token_pca_layers_long.csv`` (embeddings + PCA rows).
+Run ``3.5.embedding.py`` for ``feature_token_pca_layers_long.csv`` (embeddings + PCA rows).
 """
 
 import os
@@ -254,7 +254,7 @@ def main() -> None:
 
     print("Attention extraction complete (chunked predict).")
     print(f"Wrote: {OUT_FEATURE_LONG}")
-    print("For PCA rows run Code/3.4.embedding.py; for Fig. 3 run Code/4.3.Fig.3.R.")
+    print("For PCA rows run Code/3.5.embedding.py; for Fig. 3 run Code/4.3.Fig.3.R.")
 
 
 if __name__ == "__main__":

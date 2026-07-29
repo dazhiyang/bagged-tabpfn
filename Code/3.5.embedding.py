@@ -24,7 +24,7 @@ Classifier-checkpoint stage embeddings + PCA rows for Fig. 3 panel (d):
   **n_b10 × d** tokens from the bootstrap-fitted model. Axes differ by context.
 - Writes ``feature_token_pca_layers_long.csv`` for ``Code/4.3.Fig.3.R``.
 
-Attention matrices (panels (b)–(c)): run ``Code/3.3.attention.py`` first (chunked
+Attention matrices (panels (b)–(c)): run ``Code/3.4.attention.py`` first (chunked
 ``predict``); it writes ``attention_feature_layers_long.csv``.
 
 Device: ``TABPFN_EMBED_DEVICE`` (default ``cpu``) for fit and ``get_embeddings``.
@@ -559,7 +559,7 @@ def main() -> None:
         f"(Full PCA on N={X_train_scaled.shape[0]}×d; CSV Full+B10 rows n={n_b10} each)."
     )
     print(f"Wrote: {OUT_FEATURE_TOKEN_PCA_LONG}")
-    print("Attention CSV: run Code/3.3.attention.py. For Fig. 3 run Code/4.3.Fig.3.R.")
+    print("Attention CSV: run Code/3.4.attention.py. For Fig. 3 run Code/4.3.Fig.3.R.")
 
 
 if __name__ == "__main__":
