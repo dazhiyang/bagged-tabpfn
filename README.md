@@ -44,7 +44,14 @@ Used by **`Code/3.4.attention.py`**, **`Code/3.5.embedding.py`**, and **`Code/3.
 | **`2.2.KCDE.R`** | **KCDE** density-regression baseline → **`Data/Output/KCDE.txt`**. |
 | **`2.3.XGBoost.py`** | **XGBoost** + Optuna TPE (independent per combo); writes **`Data/Output/XGBoost.txt`** and **`XGBoost_best_params.txt`**. |
 | **`2.4.TabPFN.py`** | **TabPFN regressor** via **`tabpfn_client`** (API / cloud defaults, e.g. v2.5) → **`Data/Output/TabPFN.txt`**. |
-| **`2.5.TabPFN-B.py`** | **Bagged TabPFN-B**: ensemble members with bootstrap draws → **`Data/Output/TabPFN-B{m}.txt`** for each member `m`. |
+| **`2.5.TabPFN-B.py`** | **Bagged TabPFN-B** (production): ensemble members with bootstrap draws → **`Data/Output/TabPFN-B{m}.txt`** for each member `m`. Defaults \(n_{\mathrm{boot}}=2000\), \(M=10\) (retained after SI grid; see `5.1`). |
+
+### `5.*` — Reviewer-requested supplementary analyses
+
+| File | What it does |
+|------|----------------|
+| **`5.1.TabPFN-B_grid.py`** | **TabPFN-B grid** of \(n_{\mathrm{boot}}\) and \(M\) for **\(y_H,x_P\) only**: random 50/50 split of 2024 (context vs val); scores **2024 validation** RMSE only (no 2025 tuning) → **`Data/Output/TabPFN-B_sensitivity.txt`**. |
+| **`5.2.extra_baselines.py`** | **Additional GBDT baselines** (LightGBM, CatBoost; Optuna TPE as `2.3`) plus TabPFN / TabPFN-B comparison → **`Data/Output/extra_baselines_compare.txt`**, **`tex/extra_baselines_compare.tex`**. |
 
 ### `3.*` — Metrics & TabPFN–Fig. 3 diagnostics
 

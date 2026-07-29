@@ -15,7 +15,6 @@
 # Bootstrap indices are redrawn independently for every (target × retrieval) combo fit.
 # Each file stacks all combos like TabPFN.txt / MLR.txt (Time, combo, y, x).
 # Files: Data/Output/TabPFN-B{m}.txt
-
 import os
 
 import numpy as np
@@ -45,7 +44,7 @@ project_path = "/Users/seryangd/Library/CloudStorage/Dropbox/Working papers/Site
 ENS_K = 10
 ENS_SEED = 123
 # None → bootstrap sample size = full training length n_train (standard bagging).
-# Integer → m-out-of-n bootstrap (still with replacement), e.g. 2000 for lighter fits.
+# Integer → m-out-of-n bootstrap (still with replacement), e.g. 2000.
 ENS_BOOTSTRAP_SIZE = 2000
 
 ###############################################################################
