@@ -11,18 +11,15 @@
 #################################################################################
 # 4.3.Fig.3.R — Fig 3 PDF (tex/Fig3.pdf).
 # (a) ΔRMSE = RMSE_m − RMSE_TabPFN for B1–B10 and TabPFN-B (baseline_tables.tex);
-#     negative ⇒ improvement. (b) Attention + Δ attention
-#     heatmaps (one ggplot, ggnewscale; facets Full / B10 / B10−Full × layers L3–L12). (c) Token PCA
-#     (PC1 vs PC2) via ggh4x::facet_grid2(..., independent = "all") for facet_grid-style strips and
-#     per-panel free axes.
+#     negative ⇒ improvement. (b) Attention heatmaps (facets Full / B{attn_extra_member} /
+#     B10 × layers L3–L12); no colorbar (qualitative pattern comparison). Extra member
+#     chosen for contrast with B10 (default B7). (c) Token PCA (PC1 vs PC2) for the same
+#     contexts via ggh4x::facet_grid2(..., independent = "all").
 # Layout: patchwork — top row (a)|(b) with top_row_widths, bottom row (c) full width.
 #################################################################################
 
 rm(list = ls(all = TRUE))
 
-if (!requireNamespace("ggnewscale", quietly = TRUE)) {
-  stop("Install ggnewscale: install.packages(\"ggnewscale\")")
-}
 if (!requireNamespace("ggh4x", quietly = TRUE)) {
   stop("Install ggh4x (PCA panel strips + fully free scales): install.packages(\"ggh4x\")")
 }
@@ -30,9 +27,7 @@ if (!requireNamespace("ggh4x", quietly = TRUE)) {
 suppressPackageStartupMessages({
   library(ggplot2)
   library(dplyr)
-  library(tidyr)
   library(scales)
-  library(ggnewscale)
   library(ggh4x)
   library(patchwork)
   library(scattermore)
@@ -43,31 +38,31 @@ project_path <- "/Users/seryangd/Library/CloudStorage/Dropbox/Working papers/Sit
 diag_dir <- file.path(project_path, "Data", "Output", "Diag")
 fig_dir <- file.path(project_path, "tex")
 file_attn <- file.path(diag_dir, "attention_feature_layers_long.csv")
+file_attn_members <- file.path(diag_dir, "attention_feature_layers_members_long.csv")
 pca_file <- file.path(diag_dir, "feature_token_pca_layers_long.csv")
+pca_file_members <- file.path(diag_dir, "feature_token_pca_layers_members_long.csv")
 baseline_tex <- file.path(fig_dir, "baseline_tables.tex")
 fig_out <- file.path(fig_dir, "Fig3.pdf")
 fig_width_mm <- 160
-fig_height_mm <- 125
+fig_height_mm <- 145
+# Extra bootstrap member in panels (b) and (c), between Full and B10 (1-based).
+attn_extra_member <- 7L
+# Continuous attention fill: viridis + equal-count quantile breaks (colorbar omitted).
+attn_fill_cmap <- "viridis"
 n_label_bins <- 3L
 pca_pointsize <- 5
 # When fig_height_mm shrinks, **mm** / **pt** in themes & guides stay the same length on paper —
 # only panel drawing areas shrink → whitespace looks “stuck”. coord_fixed() letterboxing still
-# applies; Δ colorbar below uses **lines** so it scales with theme text (not fixed mm).
-rel_heights_bcd <- c(1.6, 1)
-top_row_widths <- c(4, 7)
+# applies.
+rel_heights_bcd <- c(1.35, 1.15)
+# Integer cell counts for patchwork character design (ratio ≈ 3.5:7.5).
+top_row_widths <- c(7L, 15L)
 # Panel (a): baseline_tables.tex → ΔRMSE = RMSE_m − RMSE_TabPFN (W m^-2); negative = better.
 panel_a_margin_v_pt <- max(2, round(fig_height_mm * 0.055))
 panel_a_plot_margin_pt <- margin(panel_a_margin_v_pt, 1, panel_a_margin_v_pt, 1, "pt")
 panel_a_y_expand_top_mult <- 0.07
-# BC Delta bar: ggplot puts the guide in its own row under the axis title; theme_bw axis.title.x
-# bottom margin + legend.margin top create a visible gap under "To token". Patchwork stacks BC
-# directly on panel (c) with little external gap, so the bar can look nearer PCA than the axis title.
 bc_axis_title_x_margin <- margin(t = 0, r = 0, b = 0, l = 0, "pt")
-bc_legend_margin <- margin(t = 0, r = 0, b = 0, l = 4, "pt")
 pca_plot_margin <- margin(0, 1, 1, 1, "pt")
-# Δ legend on panel (b): vertical bar; heights in **lines** (see header comment).
-delta_legend_barheight <- 30
-delta_legend_barwidth <- 2.2
 
 base_font_family <- "Times"
 text_size_pt <- 8
@@ -111,53 +106,83 @@ combo_labeller_parsed <- ggplot2::as_labeller(combo_label_expr, label_parsed)
 
 attn <- read.csv(file_attn, stringsAsFactors = FALSE)
 if (nrow(attn) == 0) stop("attention CSV empty: ", file_attn)
+if (!file.exists(file_attn_members)) {
+  stop("Missing members attention CSV: ", file_attn_members, " (run Code/3.6.attention_members.py)")
+}
+attn_mem <- read.csv(file_attn_members, stringsAsFactors = FALSE)
+if (nrow(attn_mem) == 0) stop("members attention CSV empty: ", file_attn_members)
 
-if (all(c("from_group", "to_group") %in% names(attn))) {
-  attn <- attn %>% dplyr::rename(from_token = from_group, to_token = to_group)
+extra_ctx <- paste0("b", attn_extra_member)
+extra_lab <- paste0("B", attn_extra_member)
+if (!extra_ctx %in% attn_mem$context) {
+  stop("context '", extra_ctx, "' not in ", file_attn_members)
 }
-if (all(c("from_feature", "to_feature") %in% names(attn))) {
-  attn <- attn %>% dplyr::rename(from_token = from_feature, to_token = to_feature)
+
+normalize_attn_tokens <- function(df) {
+  if (all(c("from_group", "to_group") %in% names(df))) {
+    df <- df %>% dplyr::rename(from_token = from_group, to_token = to_group)
+  }
+  if (all(c("from_feature", "to_feature") %in% names(df))) {
+    df <- df %>% dplyr::rename(from_token = from_feature, to_token = to_feature)
+  }
+  df
 }
+attn <- normalize_attn_tokens(attn)
+attn_mem <- normalize_attn_tokens(attn_mem)
 
 layer_levels <- c("L1", "L2", "L3", "L6", "L9", "L12")
 stage_levels_bc <- c("L3", "L6", "L9", "L12")
 token_order <- unique(c(
   attn %>% distinct(from_token) %>% pull(from_token),
-  attn %>% distinct(to_token) %>% pull(to_token)
+  attn %>% distinct(to_token) %>% pull(to_token),
+  attn_mem %>% distinct(from_token) %>% pull(from_token),
+  attn_mem %>% distinct(to_token) %>% pull(to_token)
 ))
 token_order <- c(setdiff(token_order, "label"), "label")
 
-attn <- attn %>%
+attn_extra <- attn_mem %>%
+  filter(as.character(context) == extra_ctx) %>%
+  select(context, layer, from_token, to_token, attention)
+
+attn_fb <- bind_rows(
+  attn %>% filter(context %in% c("full", "b10")),
+  attn_extra
+) %>%
   mutate(
-    context = factor(context, levels = c("full", "b10", "delta")),
+    context = factor(context, levels = c("full", extra_ctx, "b10")),
     layer = factor(layer, levels = layer_levels),
     from_token = factor(from_token, levels = token_order),
     to_token = factor(to_token, levels = token_order)
   )
 
-attn_fb <- attn %>% filter(context %in% c("full", "b10"))
+row_levels <- c("Full", extra_lab, "B10")
 
-attn_delta <- attn %>%
-  filter(context %in% c("full", "b10")) %>%
-  select(layer, from_token, to_token, context, attention) %>%
-  tidyr::pivot_wider(names_from = context, values_from = attention) %>%
-  mutate(context = "delta", attention = b10 - full) %>%
-  select(layer, from_token, to_token, context, attention)
+pca_main <- read.csv(pca_file, stringsAsFactors = FALSE)
+if (nrow(pca_main) == 0) stop("PCA CSV empty: ", pca_file)
+if (!file.exists(pca_file_members)) {
+  stop("Missing members PCA CSV: ", pca_file_members, " (run Code/3.7.embedding_members.py)")
+}
+pca_mem <- read.csv(pca_file_members, stringsAsFactors = FALSE)
+if (nrow(pca_mem) == 0) stop("members PCA CSV empty: ", pca_file_members)
+if (!extra_ctx %in% pca_mem$context) {
+  stop("context '", extra_ctx, "' not in ", pca_file_members)
+}
 
-attn_plot <- bind_rows(attn_fb, attn_delta) %>%
-  mutate(
-    context = factor(context, levels = c("full", "b10", "delta"), labels = c("Full", "B10", "B10 - Full"))
-  )
-
-pca <- read.csv(pca_file, stringsAsFactors = FALSE)
-if (nrow(pca) == 0) stop("PCA CSV empty: ", pca_file)
+pca <- bind_rows(
+  pca_main %>% filter(context %in% c("full", "b10")),
+  pca_mem %>% filter(as.character(context) == extra_ctx)
+)
 
 pca_feature_levels <- c("xP", "SZA", "lcc", "mcc", "tcsw", "tcwv", "label")
 pca <- pca %>%
   mutate(
     token = trimws(token),
     y_bin = trimws(y_bin),
-    context = factor(context, levels = c("full", "b10"), labels = c("Full", "B10")),
+    context = factor(
+      context,
+      levels = c("full", extra_ctx, "b10"),
+      labels = row_levels
+    ),
     stage = factor(stage, levels = c("Input", "L1", "L2", "L3", "L6", "L9", "L12")),
     y_bin = factor(y_bin, levels = paste0("C", seq_len(n_label_bins)))
   )
@@ -183,27 +208,31 @@ feat_cols <- c(
 feat_tokens_plot <- intersect(pca_legend_tokens, unique(as.character(pca$token)))
 feat_cols_plot <- feat_cols[feat_tokens_plot]
 
-delta_lim <- max(abs(attn_delta$attention), na.rm = TRUE)
 no_classes <- 10
-quantiles <- as.numeric(stats::quantile(attn_fb$attention, probs = seq(0, 1, length.out = no_classes + 1), na.rm = TRUE, type = 8))
+quantiles <- as.numeric(stats::quantile(
+  attn_fb$attention,
+  probs = seq(0, 1, length.out = no_classes + 1),
+  na.rm = TRUE,
+  type = 8
+))
 quantiles <- sort(unique(quantiles))
-quantiles_rescaled <- scales::rescale(quantiles, to = c(0, 1), from = range(attn_fb$attention, na.rm = TRUE))
-quantile_cols <- viridisLite::viridis(length(quantiles))
+quantiles_rescaled <- scales::rescale(
+  quantiles,
+  to = c(0, 1),
+  from = range(attn_fb$attention, na.rm = TRUE)
+)
+quantile_cols <- viridisLite::viridis(length(quantiles), option = attn_fill_cmap)
 
-row_levels <- c("Full", "B10", "B10 - Full")
+ctx_to_row <- c(full = "Full", b10 = "B10")
+ctx_to_row[[extra_ctx]] <- extra_lab
+
 df_b <- attn_fb %>%
   filter(as.character(layer) %in% stage_levels_bc) %>%
   mutate(
     row_lab = factor(
-      ifelse(as.character(context) == "full", "Full", "B10"),
+      unname(ctx_to_row[as.character(context)]),
       levels = row_levels
     ),
-    stage_col = factor(as.character(layer), levels = stage_levels_bc)
-  )
-df_c <- attn_plot %>%
-  filter(as.character(context) == "B10 - Full", as.character(layer) %in% stage_levels_bc) %>%
-  mutate(
-    row_lab = factor("B10 - Full", levels = row_levels),
     stage_col = factor(as.character(layer), levels = stage_levels_bc)
   )
 
@@ -383,7 +412,7 @@ for (ft in feat_tokens_plot) {
       color = unname(feat_cols[[ft]]),
       pointsize = pca_pointsize,
       alpha = 0.3,
-      pixels = c(700, 700),
+      pixels = c(512, 512),
       inherit.aes = FALSE
     )
 }
@@ -416,14 +445,9 @@ p_pca <- p_pca +
   guides(colour = guide_legend(override.aes = list(size = 3.2, alpha = 1), ncol = 1))
 
 # One plot: layer strips on top, row_lab strips on right (facet_grid default).
-fig_bc <- ggplot() +
+fig_bc <- ggplot(df_b, aes(x = to_token, y = from_token, fill = attention)) +
   facet_grid(rows = vars(row_lab), cols = vars(stage_col), drop = FALSE) +
-  geom_tile(
-    data = df_b,
-    aes(x = to_token, y = from_token, fill = attention),
-    colour = wong["black"],
-    linewidth = 0.06
-  ) +
+  geom_tile(colour = wong["black"], linewidth = 0.06) +
   scale_x_discrete(labels = parse_token_labels, expand = ggplot2::expansion(mult = c(0.02, 0.02))) +
   scale_y_discrete(labels = parse_token_labels, expand = ggplot2::expansion(mult = c(0.02, 0.02))) +
   scale_fill_gradientn(
@@ -433,35 +457,11 @@ fig_bc <- ggplot() +
     name = "Attention",
     guide = "none"
   ) +
-  ggnewscale::new_scale_fill() +
-  geom_tile(
-    data = df_c,
-    aes(x = to_token, y = from_token, fill = attention),
-    colour = wong["black"],
-    linewidth = 0.06
-  ) +
-  scale_fill_gradient2(
-    low = wong["orange"],
-    mid = "white",
-    high = wong["sky_blue"],
-    midpoint = 0,
-    limits = c(-delta_lim, delta_lim),
-    name = "Delta",
-    guide = guide_colorbar(
-      direction = "vertical",
-      barheight = grid::unit(delta_legend_barheight, "mm"),
-      barwidth = grid::unit(delta_legend_barwidth, "mm"),
-      title.position = "top",
-      title.hjust = 0.5
-    )
-  ) +
   coord_fixed(expand = FALSE) +
   labs(x = "To token", y = "From token", title = NULL, tag = "(b)") +
   theme_pub() +
   theme(
-    legend.position = "right",
-    legend.box.spacing = grid::unit(0, "pt"),
-    legend.margin = bc_legend_margin,
+    legend.position = "none",
     axis.title.x = element_text(margin = bc_axis_title_x_margin),
     plot.margin = margin(1, 1, 0, 1, "pt")
   )

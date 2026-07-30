@@ -9,8 +9,9 @@
 #################################################################################
 
 #################################################################################
-# 4.4.Fig.S1.R — SI attention heatmaps for TabPFN-B members B1–B10
-# (no Full / no delta). Facet grid: rows = members, columns = layers L3/L6/L9/L12.
+# 4.4.Fig.S1.R — SI attention heatmaps for remaining TabPFN-B members
+# (B1–B6, B8, B9; B7 and B10 are in Fig. 3(b); no Full / no delta).
+# Two side-by-side stacks (4 members each) × layers L3/L6/L9/L12.
 # Input: Data/Output/Diag/attention_feature_layers_members_long.csv (Code/3.6).
 # Output: tex/FigS1.pdf
 #################################################################################
@@ -32,6 +33,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(dplyr)
   library(scales)
+  library(patchwork)
 })
 
 #################################################################################
@@ -43,9 +45,9 @@ text_size_pt <- 8
 line_width_grid <- 0.06
 line_width_axis <- 0.25
 
-# Single-column SI; height sized for 10 member rows (≈ Fig. 3(b) row pitch × 10).
-width_mm <- 85
-height_mm <- 160
+# Double-column SI; two stacks of 4 members → shorter height for one-page fit.
+width_mm <- 180
+height_mm <- 95
 
 wong <- c(
   orange = "#E69F00",
@@ -63,7 +65,10 @@ viridis_continuous_option <- "viridis"
 n_quantile_classes <- 10L
 
 layer_levels <- c("L3", "L6", "L9", "L12")
-member_order <- paste0("b", 1:10)
+# Members not already shown in Fig. 3(b); split into two stacks (left | right).
+member_stack_left <- paste0("b", 1:4)
+member_stack_right <- paste0("b", c(5, 6, 8, 9))
+member_order <- c(member_stack_left, member_stack_right)
 
 token_label_expr <- c(
   xP = "italic(x)[P]",
@@ -136,7 +141,7 @@ attn <- attn %>%
     as.character(.data$context) %in% member_order,
     as.character(.data$layer) %in% layer_levels
   )
-if (nrow(attn) == 0L) stop("No B1–B10 / L3–L12 rows in: ", file_attn)
+if (nrow(attn) == 0L) stop("No remaining-member / L3–L12 rows in: ", file_attn)
 
 token_order <- unique(c(
   as.character(attn$from_token),
@@ -156,7 +161,7 @@ attn <- attn %>%
     )
   )
 
-# Shared viridis scale across all panels (quantile breaks from finite attentions).
+# Shared viridis scale across both stacks (quantile breaks from finite attentions).
 att_vals <- attn$attention[is.finite(attn$attention)]
 quantiles <- as.numeric(stats::quantile(
   att_vals,
@@ -176,44 +181,59 @@ quantile_cols <- viridisLite::viridis(
 )
 
 #################################################################################
-# Plot
+# Plot — two stacks side by side
 #################################################################################
 
-p <- ggplot(attn, aes(x = to_token, y = from_token, fill = attention)) +
-  facet_grid(rows = vars(member_lab), cols = vars(layer), drop = FALSE) +
-  geom_tile(colour = unname(wong["black"]), linewidth = line_width_grid) +
-  scale_x_discrete(
-    labels = parse_token_labels,
-    expand = expansion(mult = c(0.02, 0.02))
-  ) +
-  scale_y_discrete(
-    labels = parse_token_labels,
-    expand = expansion(mult = c(0.02, 0.02))
-  ) +
-  scale_fill_gradientn(
-    colours = quantile_cols,
-    values = quantiles_rescaled,
-    breaks = quantiles,
-    name = "Attention",
-    guide = "none"
-  ) +
-  coord_fixed(expand = FALSE) +
-  labs(x = "To token", y = "From token") +
-  theme_pub() +
-  theme(
-    legend.position = "none",
-    # Same as ggplot2 default / Fig. 3(b) right-strip orientation.
-    strip.text.y.right = element_text(
-      angle = -90,
-      hjust = 0.5,
-      vjust = 0.5,
-      size = text_size_pt
-    ),
-    strip.placement = "outside",
-    axis.text.x = element_text(angle = 0, size = text_size_pt),
-    axis.text.y = element_text(size = text_size_pt),
-    plot.margin = margin(1, 1, 1, 1, "pt")
-  )
+make_stack <- function(df, members, show_y = TRUE) {
+  labs_ord <- toupper(members)
+  d <- df %>%
+    filter(as.character(.data$member) %in% members) %>%
+    mutate(
+      member_lab = factor(toupper(as.character(.data$member)), levels = labs_ord)
+    )
+  ggplot(d, aes(x = to_token, y = from_token, fill = attention)) +
+    facet_grid(rows = vars(member_lab), cols = vars(layer), drop = FALSE) +
+    geom_tile(colour = unname(wong["black"]), linewidth = line_width_grid) +
+    scale_x_discrete(
+      labels = parse_token_labels,
+      expand = expansion(mult = c(0.02, 0.02))
+    ) +
+    scale_y_discrete(
+      labels = parse_token_labels,
+      expand = expansion(mult = c(0.02, 0.02))
+    ) +
+    scale_fill_gradientn(
+      colours = quantile_cols,
+      values = quantiles_rescaled,
+      breaks = quantiles,
+      name = "Attention",
+      guide = "none"
+    ) +
+    coord_fixed(expand = FALSE) +
+    labs(
+      x = "To token",
+      y = if (show_y) "From token" else NULL
+    ) +
+    theme_pub() +
+    theme(
+      legend.position = "none",
+      strip.text.y.right = element_text(
+        angle = -90,
+        hjust = 0.5,
+        vjust = 0.5,
+        size = text_size_pt
+      ),
+      strip.placement = "outside",
+      axis.text.x = element_text(angle = 0, size = text_size_pt),
+      axis.text.y = element_text(size = text_size_pt),
+      axis.title.y = if (show_y) element_text(size = text_size_pt) else element_blank(),
+      plot.margin = margin(1, 1, 1, 1, "pt")
+    )
+}
+
+p_left <- make_stack(attn, member_stack_left, show_y = TRUE)
+p_right <- make_stack(attn, member_stack_right, show_y = FALSE)
+p <- p_left + p_right + plot_layout(nrow = 1, widths = c(1, 1))
 
 dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
 ggplot2::ggsave(

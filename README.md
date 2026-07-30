@@ -52,6 +52,7 @@ Used by **`Code/3.4.attention.py`**, **`Code/3.5.embedding.py`**, and **`Code/3.
 |------|----------------|
 | **`5.1.TabPFN-B_grid.py`** | **TabPFN-B grid** of \(n_{\mathrm{boot}}\) and \(M\) for **\(y_H,x_P\) only**: random 50/50 split of 2024 (context vs val); scores **2024 validation** RMSE only (no 2025 tuning) → **`Data/Output/TabPFN-B_sensitivity.txt`**. |
 | **`5.2.extra_baselines.py`** | **Additional GBDT baselines** (LightGBM, CatBoost; Optuna TPE as `2.3`) plus TabPFN / TabPFN-B comparison → **`Data/Output/extra_baselines_compare.txt`**, **`tex/extra_baselines_compare.tex`**. |
+| **`5.3.DM_test.py`** | **Diebold–Mariano** paired forecast tests (two-sided, HAC lag 96); 6×6 win-count matrix incl. **TabPFN-B** (row = B, col = A, cell = # combos A significantly beats B) → **`Data/Output/dm_win_matrix.txt`**, **`dm_test_detail.txt`**. |
 
 ### `3.*` — Metrics & TabPFN–Fig. 3 diagnostics
 

@@ -9,7 +9,8 @@
 #################################################################################
 
 #################################################################################
-# 4.5.Fig.S2.R — SI token PCA for TabPFN-B members B1–B10 (no Full).
+# 4.5.Fig.S2.R — SI token PCA for remaining TabPFN-B members
+# (B1–B6, B8, B9; B7 and B10 are in Fig. 3(c); no Full).
 # Facet grid: rows = members, columns = stages (Input, L1, L2, L3, L6, L9, L12).
 # Same Wong token colours / scattermore style as Fig. 3(c).
 # Input: Data/Output/Diag/feature_token_pca_layers_members_long.csv (Code/3.7).
@@ -51,13 +52,13 @@ base_font_family <- "Times"
 text_size_pt <- 8
 line_width_axis <- 0.25
 
-# Double-column: 10 members × 7 stages (same stage set as Fig. 3(c)).
-width_mm <- 160
-height_mm <- 200
+# Single-column SI; 8 remaining members × 7 stages.
+width_mm <- 100
+height_mm <- 160
 
 pca_pointsize <- 4
 pca_alpha <- 0.3
-pca_pixels <- c(500L, 500L)
+pca_pixels <- c(400L, 400L)
 
 wong <- c(
   orange = "#E69F00",
@@ -75,7 +76,8 @@ viridis_continuous_option <- "viridis"
 # Equal-count quantile breaks for continuous colour when used (finite values only).
 
 stage_levels <- c("Input", "L1", "L2", "L3", "L6", "L9", "L12")
-member_order <- paste0("b", 1:10)
+# Members not already shown in Fig. 3(c).
+member_order <- paste0("b", c(1:6, 8, 9))
 
 token_label_expr <- c(
   xP = "italic(x)[P]",
@@ -159,7 +161,7 @@ pca <- pca %>%
     .data$stage %in% stage_levels,
     .data$token %in% names(feat_cols)
   )
-if (nrow(pca) == 0L) stop("No B1–B10 / stage / attribute-token rows in: ", pca_file)
+if (nrow(pca) == 0L) stop("No remaining-member / stage / attribute-token rows in: ", pca_file)
 
 feat_tokens_plot <- intersect(names(feat_cols), unique(pca$token))
 feat_cols_plot <- feat_cols[feat_tokens_plot]
