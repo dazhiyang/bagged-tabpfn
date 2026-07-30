@@ -5,6 +5,7 @@ Data/*
 !Data/arranged15min.txt
 Data/Output/
 tex/*.pdf
+tex/*.png
 *.Rhistory
 *.RData
 Rplots.pdf

@@ -14,7 +14,7 @@
 # Facet grid: rows = members, columns = stages (Input, L1, L2, L3, L6, L9, L12).
 # Same Wong token colours / scattermore style as Fig. 3(c).
 # Input: Data/Output/Diag/feature_token_pca_layers_members_long.csv (Code/3.7).
-# Output: tex/FigS2.pdf
+# Output: tex/FigS2.png
 #################################################################################
 
 rm(list = ls(all = TRUE))
@@ -49,12 +49,12 @@ suppressPackageStartupMessages({
 #################################################################################
 
 base_font_family <- "Times"
-text_size_pt <- 8
+text_size_pt <- 10
 line_width_axis <- 0.25
 
 # Single-column SI; 8 remaining members × 7 stages.
-width_mm <- 100
-height_mm <- 160
+width_mm <- 140
+height_mm <- 140
 
 pca_pointsize <- 4
 pca_alpha <- 0.3
@@ -108,7 +108,9 @@ pca_file <- Sys.getenv(
   "PCA_MEMBERS_CSV",
   file.path(diag_dir, "feature_token_pca_layers_members_long.csv")
 )
-fig_out <- Sys.getenv("OUTPUT_FIG", file.path(fig_dir, "FigS2.pdf"))
+fig_out <- Sys.getenv("OUTPUT_FIG", file.path(fig_dir, "FigS2.png"))
+# Raster export DPI (PNG); unused for vector PDF.
+fig_dpi <- 300L
 
 parse_token_labels <- function(x) {
   lab <- unname(token_label_expr[as.character(x)])
@@ -245,16 +247,21 @@ p <- p +
   guides(colour = guide_legend(override.aes = list(size = 3.2, alpha = 1), ncol = 1))
 
 dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
+# Close the null PDF device (opened above) so ggsave does not inherit a PDF stream.
+while (grDevices::dev.cur() > 1L) grDevices::dev.off()
+# Force a real PNG (ragg); device="png" previously wrote PDF bytes into *.png here.
 ggplot2::ggsave(
   filename = fig_out,
   plot = p,
-  device = grDevices::pdf,
+  device = ragg::agg_png,
   width = width_mm,
   height = height_mm,
   units = "mm",
-  limitsize = FALSE,
-  compress = TRUE,
-  family = base_font_family
+  dpi = fig_dpi,
+  background = "white",
+  limitsize = FALSE
 )
 
 message("Wrote: ", fig_out)
+stopifnot(identical(readBin(fig_out, "raw", 8L), as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a))))
+message("Verified PNG signature: ", fig_out)
